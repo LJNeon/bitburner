@@ -138,6 +138,9 @@ class Batcher {
 	}
 
 	StartPreparing() {
+		this.ns.print("TEST!");
+		this.ns.sleep(1);
+
 		const server = this.ns.getServer(this.server);
 		const pids = [];
 
@@ -242,14 +245,7 @@ class Batcher {
 
 				break;
 			case 2:
-				this.PrintCompletedBatches();
-
-				break;
-			default:
-				if(!this.invalidated) {
-					this.invalidated = true;
-					this.ns.print(`${DEFAULT_COLOR}[!] Current stage is invalid!`);
-				}
+				this.HandleCompletedBatches();
 
 				break;
 		}
@@ -263,6 +259,8 @@ class Batcher {
 /** @param {import("../").NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
+	ns.tail();
+	await ns.sleep(1);
 
 	const ram = new RAM(ns);
 
