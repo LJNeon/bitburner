@@ -1,6 +1,6 @@
 import {
-	MONEY_PER_HACK, HACK_LEVEL_RANGE, CHAIN_VIABLE_THRESHOLD, DEFAULT_COLOR,
-	CONSOLE_COLORS
+	MONEY_PER_HACK, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, CHAIN_VIABLE_THRESHOLD,
+	DEFAULT_COLOR, CONSOLE_COLORS
 } from "constants.js";
 import {
 	CheckPids, GetWeakThreads, GetGrowThreads, GetThreads
@@ -67,7 +67,7 @@ class Scheduler {
 
 			if(task.createdAt + task.delay <= now) {
 				this.tasks.delete(id);
-				task.run();
+				task.run(task);
 			}
 		}
 	}
@@ -84,6 +84,7 @@ class Batcher {
 		/** @type {import("../").NS} */
 		this.ns = ns;
 		this.server = FindBestServer(ns, 1);
+		this.hackPct = hackPct;
 		this.level = ns.getHackingLevel();
 		this.levelMax = this.level + HACK_LEVEL_RANGE;
 		this.createdAt = performance.now();
@@ -178,6 +179,25 @@ class Batcher {
 		this.scheduler.Clear();
 	}
 
+	CancelBatch(id, which, diff) {
+		const batch = this.batches.get(id);
+
+		if(which === W2 || which === G) {
+			this.scheduler.Delete(batch.pending[G]);
+			batch.finished[G] = true;
+		}
+
+		this.scheduler.Delete(batch.pending[H]);
+		batch.finished[H] = true;
+
+		if(!batch.cancelled) {
+			batch.cancelled = true;
+			this.ns.print(`${DEFAULT_COLOR}[!] Batch ${id + 1} cancelled (${diff}).`);
+		}
+
+		return which !== W1 && which !== W2;
+	}
+
 	StartBatch(now) {
 		const id = this.ran;
 		const batch = {pending: [], pids: [], finished: Array(4).fill(false)};
@@ -185,7 +205,13 @@ class Batcher {
 		for(let i = W1; i <= H; i++) {
 			const which = i;
 
-			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], () => {
+			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], task => {
+				const lateBy = now - task.createdAt + this.delays[which];
+				const atMinSec = this.ns.getServerMinSecurityLevel(this.server) === this.ns.getServerSecurityLevel(this.server);
+
+				if((lateBy >= SAFETY_THRESHOLD || !atMinSec) && this.CancelBatch(id, which, lateBy))
+					return;
+
 				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which]);
 			});
 		}
