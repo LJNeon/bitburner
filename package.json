@@ -1,16 +1,16 @@
 {
-  "name": "bitburner-typescript-template",
-  "version": "1.0.0",
+  "name": "bitburner",
+  "version": "0.1.0",
+  "author": "ElJay#7711",
   "scripts": {
-    "transpile": "npx tsc -w",
-    "watch": "npx bitburner-filesync"
+    "lint": "eslint src --ext .js",
+    "push": "bitburner-sync",
+    "pull": "bitburner-sync --get"
   },
-  "author": "hydroflame, Hoekstraa, based on work by SlyCedix",
+  "dependencies": {
+    "bitburner-sync": "^1.5.3"
+  },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.35.1",
-    "@typescript-eslint/parser": "^5.35.1",
-    "bitburner-filesync": "^1.0.0",
-    "eslint": "^8.22.0",
-    "typescript": "^4.7.4"
+    "eslint": "^8.22.0"
   }
 }
