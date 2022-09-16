@@ -1,12 +1,14 @@
 import {
-	MONEY_PER_HACK, HACK_LEVEL_RANGE, DEFAULT_COLOR, CONSOLE_COLORS
+	MONEY_PER_HACK, HACK_LEVEL_RANGE, CHAIN_VIABLE_THRESHOLD, DEFAULT_COLOR,
+	CONSOLE_COLORS
 } from "constants.js";
-import {RunScript} from "batcher/run-script.js";
-import {CalcPeriodDepth, CalcDelayS} from "batcher/stalefish.js";
-import {FindBestServer} from "tools/target.js";
 import {
 	CheckPids, GetWeakThreads, GetGrowThreads, GetThreads
 } from "utility.js";
+import {RAM} from "batcher/ram.js";
+import {RunScript} from "batcher/run-script.js";
+import {CalcPeriodDepth, CalcDelayS} from "batcher/stalefish.js";
+import {FindBestServer} from "tools/target.js";
 
 const W1 = 0;
 const W2 = 1;
@@ -84,7 +86,6 @@ class Batcher {
 		this.server = FindBestServer(ns, 1);
 		this.level = ns.getHackingLevel();
 		this.levelMax = this.level + HACK_LEVEL_RANGE;
-		this.threads = GetThreads(ns, this.server, hackPct);
 		this.createdAt = performance.now();
 		this.ran = 0;
 		this.scheduler = new Scheduler();
@@ -98,10 +99,7 @@ class Batcher {
 		this.period = period;
 		this.depth = depth;
 		this.AdjustForLevel();
-
-		const time = ns.nFormat(Math.floor(period / 1e3), "00:00:00");
-
-		ns.print(`${DEFAULT_COLOR}[-] Batching against "${this.server}" (x${depth} / ${time}).`);
+		ns.print(`${DEFAULT_COLOR}[-] Batching on "${this.server}" (x${depth} / ${ns.nFormat(period, "0[.00]")}).`);
 	}
 
 	GetColor(id) {
@@ -134,6 +132,7 @@ class Batcher {
 	}
 
 	AdjustForLevel() {
+		this.threads = GetThreads(this.ns, this.server, this.hackPct);
 		this.delays = CalcDelayS(this.ns, this.server, this.period, this.depth);
 		this.scheduler.AdjustDelays(this.delays);
 	}
@@ -187,12 +186,12 @@ class Batcher {
 			const which = i;
 
 			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], () => {
-				this.ns.print(`${this.GetColor(id)}[${which + 1}] ${this.GetName(which)} x${this.threads[which]} started.`);
 				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which]);
 			});
 		}
 
 		this.batches.set(id, batch);
+		++this.ran;
 	}
 
 	HandleCompletedBatches() {
@@ -264,6 +263,13 @@ class Batcher {
 /** @param {import("../").NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
+
+	const ram = new RAM(ns);
+
+	if(ram.free < CHAIN_VIABLE_THRESHOLD)
+		return ns.tprint("Not at 1 PB of available RAM yet!");
+	else if(!ns.fileExists("Formulas.exe"))
+		return ns.tprint("Missing Formulas.exe, which is required!");
 
 	const hackPct = ns.args[0] ?? MONEY_PER_HACK;
 	let batcher = new Batcher(ns, hackPct);

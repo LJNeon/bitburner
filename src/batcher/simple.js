@@ -1,7 +1,7 @@
-import {ScanAll, SleepPids, CalcGrowThreadsL} from "utility.js";
 import {
 	HACK_RAM, WEAKEN_GROW_RAM, MONEY_PER_HACK, SAFETY_DELAY
 } from "constants.js";
+import {ScanAll, SleepPids, CalcGrowThreadsL} from "utility.js";
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {
@@ -34,7 +34,6 @@ export async function main(ns) {
 		let finished = true;
 
 		if(result.hosted === hackWeakenThreads) {
-			ns.print(`[1] weaken.js x${hackWeakenThreads} started.`);
 			pids.push(...result.pids);
 			SleepPids(ns, result.pids).then(() => {
 				if(finished)
@@ -59,7 +58,6 @@ export async function main(ns) {
 		result = RunScript(ns, "weaken.js", target, growWeakenThreads);
 
 		if(result.hosted === growWeakenThreads) {
-			ns.print(`[2] weaken.js x${growWeakenThreads} started.`);
 			pids.push(...result.pids);
 			SleepPids(ns, result.pids).then(() => {
 				if(finished)
@@ -86,7 +84,6 @@ export async function main(ns) {
 		result = RunScript(ns, "grow.js", target, growThreads);
 
 		if(result.hosted === growThreads) {
-			ns.print(`[3] grow.js x${growThreads} started.`);
 			pids.push(...result.pids);
 			SleepPids(ns, result.pids).then(() => {
 				if(finished)
@@ -116,7 +113,6 @@ export async function main(ns) {
 		result = RunScript(ns, "hack.js", target, hackThreads);
 
 		if(result.hosted === hackThreads) {
-			ns.print(`[4] hack.js x${hackThreads} started.`);
 			pids.push(...result.pids);
 			SleepPids(ns, result.pids).then(() => {
 				if(finished)

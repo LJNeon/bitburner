@@ -1,6 +1,6 @@
 import {SAFETY_DELAY, HACK_LEVEL_RANGE} from "constants.js";
-import {RAM} from "batcher/ram.js";
 import {GetBatchRam} from "utility.js";
+import {RAM} from "batcher/ram.js";
 
 /** @param {import("../").NS} ns */
 export function CalcPeriodDepth(ns, target, hackPct) {
