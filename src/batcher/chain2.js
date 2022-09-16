@@ -99,7 +99,7 @@ class Batcher {
 		this.period = period;
 		this.depth = depth;
 		this.AdjustForLevel();
-		ns.print(`${DEFAULT_COLOR}[-] Batching on "${this.server}" (x${depth} / ${ns.nFormat(period, "0[.00]")}).`);
+		ns.print(`${DEFAULT_COLOR}[-] Batching on "${this.server}" x${depth}.`);
 	}
 
 	GetColor(id) {
@@ -138,9 +138,6 @@ class Batcher {
 	}
 
 	StartPreparing() {
-		this.ns.print("TEST!");
-		this.ns.sleep(1);
-
 		const server = this.ns.getServer(this.server);
 		const pids = [];
 

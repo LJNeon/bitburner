@@ -101,17 +101,25 @@ export function GetWeakThreads(ns, target, securityLevel, cores = 1) {
 	return Math.ceil((sec - server.minDifficulty) / ns.weakenAnalyze(1, cores) * WEAKEN_GROW_EXTRA);
 }
 /** @param {import(".").NS} ns */
-export function GetGrowThreads(ns, target, moneyAvailable, cores = 1) {
+export function GetGrowThreads(ns, target, moneyAvailable, minSec = true, cores = 1) {
 	const server = ns.getServer(target);
 
 	if(moneyAvailable != null)
 		server.moneyAvailable = moneyAvailable;
 
+	if(minSec)
+		server.hackDifficulty = server.minDifficulty;
+
 	return Math.ceil(CalcGrowThreads(ns, server, ns.getPlayer(), cores) * WEAKEN_GROW_EXTRA);
 }
 /** @param {import(".").NS} ns */
-export function GetHackThreads(ns, target, hackPct) {
-	return Math.floor(hackPct / ns.formulas.hacking.hackPercent(ns.getServer(target), ns.getPlayer()));
+export function GetHackThreads(ns, target, hackPct, minSec = true) {
+	const server = ns.getServer(target);
+
+	if(minSec)
+		server.hackDifficulty = server.minDifficulty;
+
+	return Math.floor(hackPct / ns.formulas.hacking.hackPercent(server, ns.getPlayer()));
 }
 /** @param {import(".").NS} ns */
 export function GetBatchThreads(ns, target, hackPct) {
@@ -134,7 +142,7 @@ export function GetThreads(ns, target, hackPct) {
 	const growThreads = GetGrowThreads(ns, target, server.moneyMax * hackPct);
 	const weak2Threads = Math.ceil((growThreads * SEC_PER_THREAD.GROW) / SEC_PER_THREAD.WEAKEN);
 
-	return [hackThreads, weak1Threads, growThreads, weak2Threads];
+	return [weak1Threads, 0, 0, weak2Threads, growThreads, hackThreads];
 }
 /** @param {import(".").NS} ns */
 export function GetBatchRam(ns, target, hackPct) {
