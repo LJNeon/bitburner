@@ -101,23 +101,21 @@ export function GetWeakThreads(ns, target, securityLevel, cores = 1) {
 	return Math.ceil((sec - server.minDifficulty) / ns.weakenAnalyze(1, cores) * WEAKEN_GROW_EXTRA);
 }
 /** @param {import(".").NS} ns */
-export function GetGrowThreads(ns, target, moneyAvailable, minSec = true, cores = 1) {
+export function GetGrowThreads(ns, target, moneyAvailable, cores = 1) {
 	const server = ns.getServer(target);
 
 	if(moneyAvailable != null)
 		server.moneyAvailable = moneyAvailable;
 
-	if(minSec)
-		server.hackDifficulty = server.minDifficulty;
+	server.hackDifficulty = server.minDifficulty;
 
 	return Math.ceil(CalcGrowThreads(ns, server, ns.getPlayer(), cores) * WEAKEN_GROW_EXTRA);
 }
 /** @param {import(".").NS} ns */
-export function GetHackThreads(ns, target, hackPct, minSec = true) {
+export function GetHackThreads(ns, target, hackPct) {
 	const server = ns.getServer(target);
 
-	if(minSec)
-		server.hackDifficulty = server.minDifficulty;
+	server.hackDifficulty = server.minDifficulty;
 
 	return Math.floor(hackPct / ns.formulas.hacking.hackPercent(server, ns.getPlayer()));
 }
