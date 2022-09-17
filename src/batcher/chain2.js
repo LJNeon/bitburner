@@ -8,7 +8,7 @@ import {
 import {RAM} from "batcher/ram.js";
 import {RunScript} from "batcher/run-script.js";
 import {CalcPeriodDepth, CalcDelayS} from "batcher/stalefish.js";
-import {FindBestServer} from "tools/target.js";
+import {FindBestServer} from "tools/best-target.js";
 
 const W1 = 0;
 const W2 = 1;
@@ -62,9 +62,7 @@ class Scheduler {
 	}
 
 	Run(now) {
-		for(const id of this.tasks.keys()) {
-			const task = this.tasks.get(id);
-
+		for(const [id, task] of this.tasks.entries()) {
 			if(task.createdAt + task.delay <= now) {
 				this.tasks.delete(id);
 				task.run(task);
@@ -206,10 +204,11 @@ class Batcher {
 			const which = i;
 
 			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], task => {
-				const lateBy = now - task.createdAt + this.delays[which];
-				const atMinSec = this.ns.getServerMinSecurityLevel(this.server) === this.ns.getServerSecurityLevel(this.server);
+				const lateBy = now - task.createdAt + task.delay;
+				const aboveMinSec = which !== W1 && which !== W2
+					&& this.ns.getServerMinSecurityLevel(this.server) < this.ns.getServerSecurityLevel(this.server);
 
-				if((lateBy >= SAFETY_THRESHOLD || !atMinSec) && this.CancelBatch(id, which, lateBy))
+				if((lateBy >= SAFETY_THRESHOLD || aboveMinSec) && this.CancelBatch(id, which, lateBy))
 					return;
 
 				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which]);
@@ -233,7 +232,9 @@ class Batcher {
 
 			if(batch.finished.every(f => f)) {
 				this.batches.delete(id);
-				this.ns.print(`${color}[-] Batch ${id + 1} completed.`);
+
+				if(!batch.cancelled)
+					this.ns.print(`${color}[-] Batch ${id + 1} completed.`);
 			}
 		}
 	}
@@ -241,6 +242,7 @@ class Batcher {
 	Run() {
 		const now = performance.now();
 		const level = this.ns.getHackingLevel();
+		const nextBatchAt = this.createdAt + (this.period * this.ran);
 
 		if(level !== this.level) {
 			if(level > this.levelMax)
@@ -250,8 +252,8 @@ class Batcher {
 			this.level = level;
 		}
 
-		if(this.createdAt + (this.period * this.ran) <= now)
-			this.StartBatch(now);
+		if(this.ran === 0 && nextBatchAt <= now)
+			this.StartBatch(nextBatchAt);
 
 		this.scheduler.Run(now);
 		this.HandleCompletedBatches();
@@ -283,12 +285,12 @@ class Batcher {
 export async function main(ns) {
 	ns.disableLog("ALL");
 	ns.tail();
-	await ns.sleep(1);
 
 	const ram = new RAM(ns);
+	let last = performance.now();
 
 	if(ram.free < CHAIN_VIABLE_THRESHOLD)
-		return ns.tprint("Not at 1 PB of available RAM yet!");
+		return ns.tprint(`Not at ${ns.nFormat(CHAIN_VIABLE_THRESHOLD * 1e9, "0.00b")} of available RAM yet!`);
 	else if(!ns.fileExists("Formulas.exe"))
 		return ns.tprint("Missing Formulas.exe, which is required!");
 
@@ -296,12 +298,18 @@ export async function main(ns) {
 	let batcher = new Batcher(ns, hackPct);
 
 	while(true) {
+		const now = performance.now();
+		const delta = now - last;
+
+		last = now;
+
 		if(batcher.Stopped()) {
 			ns.print(`${DEFAULT_COLOR}[-] Batcher is restarting.`);
 			batcher = new Batcher(ns, hackPct);
 		}
 
 		batcher.Update();
+		ns.print(delta);
 		await ns.sleep(5);
 	}
 }

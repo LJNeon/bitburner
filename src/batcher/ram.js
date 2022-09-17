@@ -17,8 +17,8 @@ export class RAM {
 			if(server.startsWith("hacknet"))
 				continue;
 
-			const reduction = target.purchasedByPlayer ? Math.floor(target.maxRam * PERSONAL_SERVER_SHARE) : 0;
-			const used = simulateMax ? 0 : target.ramUsed - reduction;
+			const shared = target.purchasedByPlayer ? Math.floor(target.maxRam * PERSONAL_SERVER_SHARE) : 0;
+			const used = simulateMax ? 0 : target.ramUsed - shared;
 			const free = target.maxRam - used;
 
 			this.used += used;
@@ -31,7 +31,7 @@ export class RAM {
 					used,
 					free,
 					total: target.maxRam,
-					reserved: server === "home" ? MIN_HOME_RAM : reduction,
+					reserved: server === "home" ? MIN_HOME_RAM : shared,
 					bought: target.purchasedByPlayer
 				});
 			}

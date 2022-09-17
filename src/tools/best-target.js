@@ -4,7 +4,7 @@ import {ScanAll} from "utility.js";
 export async function main(ns) {
 	ns.disableLog("ALL");
 
-	const targets = FindBestServer(ns, 15);
+	const targets = FindBestServer(ns, 10);
 
 	if(targets.length === 0)
 		return ns.tprint("Oops! No valid servers to hack found.");

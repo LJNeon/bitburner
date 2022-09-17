@@ -136,13 +136,14 @@ export function GetBatchThreads(ns, target, hackPct) {
 export function GetThreads(ns, target, hackPct) {
 	const server = ns.getServer(target);
 	const hackThreads = GetHackThreads(ns, target, hackPct);
-	const weak1Threads = Math.ceil((hackThreads * SEC_PER_THREAD.HACK) / SEC_PER_THREAD.WEAKEN);
 	const growThreads = GetGrowThreads(ns, target, server.moneyMax * hackPct);
-	const weak2Threads = Math.ceil((growThreads * SEC_PER_THREAD.GROW) / SEC_PER_THREAD.WEAKEN);
 
-	ns.print(growThreads, " ", weak2Threads);
-
-	return [weak1Threads, weak2Threads, growThreads, hackThreads];
+	return [
+		Math.ceil((hackThreads * SEC_PER_THREAD.HACK) / SEC_PER_THREAD.WEAKEN),
+		Math.ceil((growThreads * SEC_PER_THREAD.GROW) / SEC_PER_THREAD.WEAKEN),
+		growThreads,
+		hackThreads
+	];
 }
 /** @param {import(".").NS} ns */
 export function GetBatchRam(ns, target, hackPct) {

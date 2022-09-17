@@ -11,7 +11,7 @@ export function RunScript(ns, script, server, threadCount, partial = false) {
 	let hosted = 0;
 
 	while(hosted < threadCount) {
-		const freeRam = ram.total <= FOCUS_SMALL_THRESHOLD ? ram.Smallest(threadRam * threadCount) : ram.Largest();
+		const freeRam = ram.free <= FOCUS_SMALL_THRESHOLD ? ram.Smallest(threadRam * threadCount) : ram.Largest();
 		let threads = Math.floor(freeRam / threadRam);
 
 		if(threads === 0)
@@ -23,12 +23,8 @@ export function RunScript(ns, script, server, threadCount, partial = false) {
 
 		const host = ram.Reserve(freeRam);
 
-		if(host == null) {
-			if(!(spread && partial))
-				break;
-			else
-				continue;
-		}
+		if(host == null)
+			break;
 
 		const pid = ns.exec(script, host, threads, server, GenID(ns));
 

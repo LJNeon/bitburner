@@ -5,7 +5,7 @@ import {
 } from "constants.js";
 import {RAM} from "batcher/ram.js";
 import {CalcPeriodDepth, CalcDelays} from "batcher/stalefish.js";
-import {FindBestServer} from "tools/target.js";
+import {FindBestServer} from "tools/best-target.js";
 import {
 	GenID, CheckPids, GetWeakThreads, GetGrowThreads,
 	GetHackThreads, GetBatchRam
