@@ -194,9 +194,7 @@ async function Prepare(ns, target) {
 
 			ns.print(`[!] ${ns.nFormat(sec, "(0.00)")} security level, desired is ${ns.nFormat(minSec, "(0.00)")}.`);
 			pids.push(...RunScript(ns, "weaken.js", target, threads).pids);
-		}
-
-		if(!atMaxMoney) {
+		}else if(!atMaxMoney) {
 			const money = ns.getServerMoneyAvailable(target);
 			const maxMoney = ns.getServerMaxMoney(target);
 			const threads = CalcGrowThreadsL(ns, target, maxMoney - money);

@@ -4,6 +4,10 @@ import {GenID, ScanAll} from "utility.js";
 const MONEY_LIMIT = 0.4;
 const MAX_RAM = 2 ** 20;
 
+function GrabID(name) {
+	return name.slice(name.lastIndexOf("-") + 1);
+}
+
 /** @param {import("../").NS} ns */
 function GetTotalRam(ns) {
 	return ScanAll(ns).reduce((a, b) => a + ns.getServerMaxRam(b), 0);
@@ -28,14 +32,15 @@ export async function main(ns) {
 	while(true) {
 		const servers = ns.getPurchasedServers();
 		const money = ns.getServerMoneyAvailable("home") * MONEY_LIMIT;
+		const maxSize = Math.log2(ns.getPurchasedServerMaxRam());
 
 		if(servers.length < ns.getPurchasedServerLimit()) {
-			for(let i = 20; i >= 1; i--) {
+			for(let i = maxSize; i >= 1; i--) {
 				const ram = 2 ** i;
 				const cost = ns.getPurchasedServerCost(ram);
 
-				if(cost <= money && (ram / GetTotalRam(ns) >= 0.24 || i === 20)) {
-					await BuyServer(ns, GenID(ns), ram);
+				if(cost <= money && (ram / GetTotalRam(ns) >= 0.24 || i === maxSize)) {
+					await BuyServer(ns, GenID(servers.map(s => GrabID(s))), ram);
 
 					break;
 				}
@@ -48,14 +53,14 @@ export async function main(ns) {
 			if(ns.getServerMaxRam(smallest) === MAX_RAM)
 				break;
 
-			for(let i = 20; i >= 1; i--) {
+			for(let i = maxSize; i >= 1; i--) {
 				const ram = 2 ** i;
 				const cost = ns.getPurchasedServerCost(ram);
 
-				if(cost <= money && (ram / GetTotalRam(ns) >= 0.24 || i === 20) && ram > ns.getServerMaxRam(smallest)) {
+				if(cost <= money && (ram / GetTotalRam(ns) >= 0.24 || i === maxSize) && ram > ns.getServerMaxRam(smallest)) {
 					ns.killall(smallest);
 					ns.deleteServer(smallest);
-					await BuyServer(ns, smallest.slice(smallest.lastIndexOf("-") + 1), ram, true);
+					await BuyServer(ns, GrabID(smallest), ram, true);
 
 					break;
 				}

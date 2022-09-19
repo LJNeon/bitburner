@@ -16,7 +16,7 @@ const G = 2;
 const H = 3;
 const scripts = ["weaken.js", "weaken.js", "grow.js", "hack.js"];
 
-class Scheduler {
+export class Scheduler {
 	constructor() {
 		this.lastID = 0;
 		this.tasks = new Map();
@@ -27,7 +27,7 @@ class Scheduler {
 	}
 
 	Schedule(type, createdAt, delay, run) {
-		const id = this.GenID();
+		const id = this.GenID(Array.from(this.tasks.keys()));
 
 		this.tasks.set(id, {
 			createdAt,
@@ -65,7 +65,7 @@ class Scheduler {
 		for(const [id, task] of this.tasks.entries()) {
 			if(task.createdAt + task.delay <= now) {
 				this.tasks.delete(id);
-				task.run(task);
+				task.run(task, now);
 			}
 		}
 	}
@@ -147,10 +147,8 @@ class Batcher {
 
 			this.ns.print(`${DEFAULT_COLOR}[!] ${sec}/${minSec} security.`);
 			pids.push(...RunScript(this.ns, "weaken.js", this.server, threads, true));
-		}
-
-		if(server.moneyAvailable < server.moneyMax) {
-			const threads = GetGrowThreads(this.ns, this.server);
+		}else if(server.moneyAvailable < server.moneyMax) {
+			const threads = GetGrowThreads(this.ns, this.server, null, false);
 			const money = this.ns.nFormat(server.moneyAvailable, "$0[.00]a");
 			const moneyMax = this.ns.nFormat(server.moneyMax, "$0[.00]a");
 
@@ -203,12 +201,12 @@ class Batcher {
 		for(let i = W1; i <= H; i++) {
 			const which = i;
 
-			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], task => {
-				const lateBy = now - task.createdAt + task.delay;
+			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], (task, at) => {
+				const lateBy = at - task.createdAt + task.delay;
 				const aboveMinSec = which !== W1 && which !== W2
 					&& this.ns.getServerMinSecurityLevel(this.server) < this.ns.getServerSecurityLevel(this.server);
 
-				if((lateBy >= SAFETY_THRESHOLD || aboveMinSec) && this.CancelBatch(id, which, lateBy))
+				if((lateBy >= SAFETY_THRESHOLD || aboveMinSec) && this.CancelBatch(id, which, aboveMinSec || lateBy))
 					return;
 
 				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which]);

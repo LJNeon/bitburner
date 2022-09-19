@@ -3,11 +3,10 @@ import {
 } from "constants.js";
 
 /** @param {import(".").NS} ns */
-export function GenID(ns) {
-	const ids = ns.getPurchasedServers().map(s => s.slice(s.lastIndexOf("-") + 1));
+export function GenID(existing = []) {
 	let id = Math.random().toString(16).slice(-6);
 
-	while(ids.includes(id))
+	while(existing.includes(id))
 		id = Math.random().toString(16).slice(-6);
 
 	return id;
@@ -57,11 +56,12 @@ function LambertWLog(logX) {
 
 /** @param {import(".").NS} ns */
 function GrowPercent(ns, host, threads = 1, cores = 1, opts = {}) {
-	const {ServerGrowthRate = 1, hackDifficulty = ns.getServerSecurityLevel(host)} = opts;
+	const {hackDifficulty = ns.getServerSecurityLevel(host)} = opts;
 	const growth = ns.getServerGrowth(host) / 100;
 	const multiplier = ns.getPlayer().mults.hacking_grow;
 	const base = Math.min(1 + (0.03 / hackDifficulty), 1.0035);
-	const power = growth * ServerGrowthRate * multiplier * ((cores + 15) / 16);
+	// TODO: FIX!!!
+	const power = growth * 0.2/*ns.getBitNodeMultipliers().ServerGrowthRate*/ * multiplier * ((cores + 15) / 16);
 
 	return base ** (power * threads);
 }
@@ -101,13 +101,14 @@ export function GetWeakThreads(ns, target, securityLevel, cores = 1) {
 	return Math.ceil((sec - server.minDifficulty) / ns.weakenAnalyze(1, cores) * WEAKEN_GROW_EXTRA);
 }
 /** @param {import(".").NS} ns */
-export function GetGrowThreads(ns, target, moneyAvailable, cores = 1) {
+export function GetGrowThreads(ns, target, money, minDifficulty = true, cores = 1) {
 	const server = ns.getServer(target);
 
-	if(moneyAvailable != null)
-		server.moneyAvailable = moneyAvailable;
+	if(money != null)
+		server.moneyAvailable = money;
 
-	server.hackDifficulty = server.minDifficulty;
+	if(minDifficulty)
+		server.hackDifficulty = server.minDifficulty;
 
 	return Math.ceil(CalcGrowThreads(ns, server, ns.getPlayer(), cores) * WEAKEN_GROW_EXTRA);
 }
@@ -120,34 +121,21 @@ export function GetHackThreads(ns, target, hackPct) {
 	return Math.floor(hackPct / ns.formulas.hacking.hackPercent(server, ns.getPlayer()));
 }
 /** @param {import(".").NS} ns */
-export function GetBatchThreads(ns, target, hackPct) {
-	const server = ns.getServer(target);
-	const growThreads = GetGrowThreads(ns, target, server.moneyMax * hackPct);
-	const hackThreads = GetHackThreads(ns, target, hackPct);
-
-	return {
-		H: hackThreads,
-		W1: Math.ceil((hackThreads * SEC_PER_THREAD.HACK) / SEC_PER_THREAD.WEAKEN),
-		G: growThreads,
-		W2: Math.ceil((growThreads * SEC_PER_THREAD.GROW) / SEC_PER_THREAD.WEAKEN)
-	};
-}
-/** @param {import(".").NS} ns */
 export function GetThreads(ns, target, hackPct) {
 	const server = ns.getServer(target);
 	const hackThreads = GetHackThreads(ns, target, hackPct);
 	const growThreads = GetGrowThreads(ns, target, server.moneyMax * hackPct);
 
 	return [
-		Math.ceil((hackThreads * SEC_PER_THREAD.HACK) / SEC_PER_THREAD.WEAKEN),
-		Math.ceil((growThreads * SEC_PER_THREAD.GROW) / SEC_PER_THREAD.WEAKEN),
+		GetWeakThreads(ns, target, server.minDifficulty + (hackThreads * SEC_PER_THREAD.HACK)),
+		GetWeakThreads(ns, target, server.minDifficulty + (growThreads * SEC_PER_THREAD.GROW)),
 		growThreads,
 		hackThreads
 	];
 }
 /** @param {import(".").NS} ns */
 export function GetBatchRam(ns, target, hackPct) {
-	const threads = GetBatchThreads(ns, target, hackPct);
+	const threads = GetThreads(ns, target, hackPct);
 
-	return (HACK_RAM * threads.H) + (WEAKEN_GROW_RAM * (threads.W1 + threads.G + threads.W2));
+	return (HACK_RAM * threads[3]) + (WEAKEN_GROW_RAM * (threads[0] + threads[1] + threads[2]));
 }

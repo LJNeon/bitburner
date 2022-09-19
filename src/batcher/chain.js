@@ -39,7 +39,7 @@ function RunScript(ns, script, server, threadCount, partial = false) {
 				continue;
 		}
 
-		const pid = ns.exec(script, host, threads, server, GenID(ns));
+		const pid = ns.exec(script, host, threads, server, GenID());
 
 		if(pid !== 0) {
 			pids.push(pid);
