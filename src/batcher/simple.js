@@ -1,6 +1,6 @@
 import {
 	WEAKEN_GROW_RAM, HACK_RAM, IDS, TIME_RATIOS,
-	MONEY_PER_HACK, SAFETY_DELAY, RETRY_AFTER, CONSOLE_COLORS,
+	MONEY_PER_HACK, SAFETY_DELAY, RETRY_AFTER, TAIL_COLORS,
 	DEFAULT_COLOR
 } from "constants.js";
 import {SleepPids} from "utility.js";
@@ -18,14 +18,14 @@ function EnoughRAM(ns, target, hackPct) {
 	const growMsg = `a server with ${ns.nFormat(growRam * 1e9, "0.00b")} RAM`;
 	let result = ram.Smallest(growRam);
 
-	if(result.server == null)
+	if(result == null)
 		return growMsg;
 	else
 		ram.Reserve(result.server, result.size);
 
 	result = ram.Smallest(hackRam);
 
-	if(result.server == null)
+	if(result == null)
 		return `${growMsg} and another with ${ns.nFormat(hackRam * 1e9, "0.00b")} RAM`;
 	else
 		ram.Reserve(result.server, result.size);
@@ -55,13 +55,18 @@ async function Prepare(ns, target) {
 			const threads = GetWeakThreads(hackDifficulty - minDifficulty);
 
 			ns.print(`${DEFAULT_COLOR}[!] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
-			pids.push(...RunScript(ns, "weaken.js", target, threads, true));
-		}else if(moneyAvailable !== moneyMax) {
+			pids.push(...await RunScript(ns, "weaken.js", target, threads, true));
+		}
+
+		if(moneyAvailable !== moneyMax) {
 			const threads = GetGrowThreadsL(ns, target, moneyMax - moneyAvailable);
 
 			ns.print(`${DEFAULT_COLOR}[!] Cash at ${ns.nFormat(moneyAvailable, "$0.00a")}/${ns.nFormat(moneyMax, "$0.00a")}`);
-			pids.push(...RunScript(ns, "grow.js", target, threads, true));
+			pids.push(...await RunScript(ns, "grow.js", target, threads, true));
 		}
+
+		if(pids.length === 0)
+			throw Error("Not enough RAM to spawn a single thread!");
 
 		await SleepPids(ns, pids);
 	}
@@ -140,7 +145,7 @@ export async function main(ns) {
 		let result = RunScript(ns, "weaken.js", target, threads[IDS.W1]);
 
 		if(result.length === 0) {
-			ns.print(`${CONSOLE_COLORS[IDS.W1]}[!] Weaken x${threads[IDS.W1]} failed. Waiting ${RETRY_AFTER[1]}...`);
+			ns.print(`${TAIL_COLORS[IDS.W1]}[!] Weaken x${threads[IDS.W1]} failed. Waiting ${RETRY_AFTER[1]}...`);
 			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
@@ -156,7 +161,7 @@ export async function main(ns) {
 		result = RunScript(ns, "weaken.js", target, threads[IDS.W2]);
 
 		if(result.length === 0) {
-			ns.print(`${CONSOLE_COLORS[IDS.W2]}[!] Weaken x${threads[IDS.W2]} failed. Waiting ${RETRY_AFTER[1]}...`);
+			ns.print(`${TAIL_COLORS[IDS.W2]}[!] Weaken x${threads[IDS.W2]} failed. Waiting ${RETRY_AFTER[1]}...`);
 			pids[IDS.W1].forEach(pid => ns.kill(pid));
 			await ns.asleep(RETRY_AFTER[0]);
 
@@ -173,7 +178,7 @@ export async function main(ns) {
 		result = RunScript(ns, "grow.js", target, threads[IDS.G]);
 
 		if(result.length === 0) {
-			ns.print(`${CONSOLE_COLORS[IDS.G]}[!] Grow x${threads[IDS.G]} failed. Waiting ${RETRY_AFTER[1]}...`);
+			ns.print(`${TAIL_COLORS[IDS.G]}[!] Grow x${threads[IDS.G]} failed. Waiting ${RETRY_AFTER[1]}...`);
 			Object.values(pids).flat().forEach(pid => ns.kill(pid));
 			await ns.asleep(RETRY_AFTER[0]);
 
@@ -190,7 +195,7 @@ export async function main(ns) {
 		result = RunScript(ns, "hack.js", target, threads[IDS.H]);
 
 		if(result.length === 0) {
-			ns.print(`${CONSOLE_COLORS[IDS.H]}[!] Hack x${threads[IDS.H]} failed. Waiting ${RETRY_AFTER[1]}...`);
+			ns.print(`${TAIL_COLORS[IDS.H]}[!] Hack x${threads[IDS.H]} failed. Waiting ${RETRY_AFTER[1]}...`);
 			Object.values(pids).flat().forEach(pid => ns.kill(pid));
 			await ns.asleep(RETRY_AFTER[0]);
 
@@ -202,11 +207,11 @@ export async function main(ns) {
 		for(let id = IDS.W1; id <= IDS.H; id++) {
 			const num = GetWhich(id, true);
 
-			SleepPids(ns, pids[id]).then(() => ns.print(`${CONSOLE_COLORS[num]}[${num + 1}] ${GetWhich(id)} ended.`));
+			SleepPids(ns, pids[id]).then(() => ns.print(`${TAIL_COLORS[num]}[${num + 1}] ${GetWhich(id)} ended.`));
 		}
 
 		await SleepPids(ns, Object.values(pids).flat());
 		await ns.asleep(SAFETY_DELAY);
-		ns.print(`${CONSOLE_COLORS[IDS.H + 1]}[-] Batch completed.`);
+		ns.print(`${TAIL_COLORS[IDS.H + 1]}[-] Batch completed.`);
 	}
 }

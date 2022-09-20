@@ -52,6 +52,10 @@ export default class RAM {
 		});
 	}
 
+	get chunkList() {
+		return this.chunks;
+	}
+
 	Reserve(server, size) {
 		const match = this.chunks.find(c => c.server === server);
 
@@ -77,7 +81,7 @@ export default class RAM {
 			}
 		}
 
-		return {server, size};
+		return server == null ? null : {server, size};
 	}
 
 	Largest() {
@@ -93,6 +97,6 @@ export default class RAM {
 			}
 		}
 
-		return {server, size};
+		return server == null ? null : {server, size};
 	}
 }

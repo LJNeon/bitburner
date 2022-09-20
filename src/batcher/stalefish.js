@@ -23,7 +23,7 @@ export function CalcPeriodDepth(ns, target, hackPct) {
 	const maxDepthByRam = Math.floor(ram.total / batchRam);
 
 	if(maxDepthByRam === 0)
-		throw new Error("Max RAM depth is 0!");
+		throw Error("Max RAM depth is 0!");
 
 	const maxDepthByDesync = Math.floor(minWeakT / (SAFETY_DELAY * 4) / 2);
 	let period;

@@ -1,6 +1,6 @@
 import {
 	MONEY_PER_HACK, IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE,
-	CHAIN_VIABLE_THRESHOLD, DEFAULT_COLOR, CONSOLE_COLORS
+	CHAIN_VIABLE_THRESHOLD, DEFAULT_COLOR, TAIL_COLORS
 } from "constants.js";
 import {CheckPids} from "utility.js";
 import RAM from "batcher/ram.js";
@@ -97,7 +97,7 @@ class Batcher {
 	}
 
 	GetColor(id) {
-		return CONSOLE_COLORS[id % CONSOLE_COLORS.length];
+		return TAIL_COLORS[id % TAIL_COLORS.length];
 	}
 
 	GetName(which) {

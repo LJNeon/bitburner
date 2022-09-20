@@ -13,7 +13,7 @@ npm i
 
 Write all your javascript source code in the `/src` directory
 
-To auto-update as you save, run `npm run watch` in a terminal
+To update the game with your local files, run `npm run push` in a terminal. To replace local files with the game's files, run `npm run pull`.
 
 ## Imports
 

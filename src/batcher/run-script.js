@@ -1,52 +1,43 @@
-import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "constants.js";
+import {WEAKEN_GROW_RAM, HACK_RAM} from "constants.js";
 import RAM from "batcher/ram.js";
 
 /** @param {import("../").NS} ns */
-export default function RunScript(ns, script, target, threadCount, partial = false) {
-	const ram = new RAM(ns);
-	const threadRam = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
+export default function RunScript(ns, script, target, threads, partial = false) {
+	const threadRAM = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
 	const spread = script === "weaken.js";
-	let hosts = {};
-	let hosted = 0;
+	const ram = new RAM(ns);
+	let servers = ram.chunkList
+		.map(({name, free, reserved}) => ({name, threads: Math.floor((free - reserved) / threadRAM)}))
+		.filter(s => s.threads > 0);
 
-	while(hosted < threadCount) {
-		const {server, size} = ram.free <= FOCUS_SMALL_THRESHOLD ? ram.Smallest(threadRam * threadCount) : ram.Largest();
-		let threads = Math.floor(size / threadRam);
+	servers.sort((a, b) => a.threads - b.threads);
 
-		if(threads === 0)
-			break;
-		else if(threads > threadCount - hosted)
-			threads = threadCount - hosted;
+	if(servers.length === 0) {
+		return null;
+	}else if(!partial && servers.reduce((c, s) => c + s.threads, 0) < threads) {
+		return null;
+	}else if(!spread) {
+		const server = servers.find(s => s.threads >= threads);
 
-		ram.Reserve(server, size);
-		hosts[server] = threads;
-		hosted += threads;
-
-		if(hosted >= threadCount)
-			break;
-	}
-
-	if(!partial && hosted !== threadCount) {
-		return [];
-	}else if(!spread && Object.keys(hosts).length > 1) {
-		if(partial) {
-			let largest;
-
-			for(const host in hosts) {
-				if(largest == null || hosts[host] > largest.threads)
-					largest = {host, threads: hosts[host]};
-			}
-
-			hosts = {[largest.host]: largest.threads};
+		if(server == null) {
+			if(partial)
+				servers = [servers[servers.length - 1]];
+			else
+				return null;
 		}else{
-			return [];
+			servers = [server];
 		}
 	}
 
 	const pids = [];
+	let spawned = 0;
 
-	for(const host in hosts)
-		pids.push(ns.exec(script, host, hosts[host], target, Math.random().toString(16).slice(-8)));
+	for(const server of servers) {
+		const spawn = Math.min(server.threads, threads - spawned);
+
+		pids.push(ns.exec(script, server.name, spawn, target, Math.random().toString(16).slice(-8)));
+		spawned += spawn;
+	}
 
 	return pids;
 }
