@@ -1,8 +1,8 @@
 import {MIN_HOME_RAM, PERSONAL_SERVER_SHARE} from "constants.js";
 import {ScanAll} from "utility.js";
 
-/** @param {import("../").NS} ns */
 export default class RAM {
+	/** @param {import("../").NS} ns */
 	constructor(ns, simulateMax = false) {
 		const servers = ScanAll(ns).filter(s => ns.hasRootAccess(s));
 
@@ -17,9 +17,9 @@ export default class RAM {
 			if(server.startsWith("hacknet"))
 				continue;
 
-			const shared = target.purchasedByPlayer ? Math.floor(target.maxRam * PERSONAL_SERVER_SHARE) : 0;
-			const used = simulateMax ? 0 : target.ramUsed - shared;
+			const used = simulateMax ? 0 : target.ramUsed;
 			const free = target.maxRam - used;
+			const shared = target.purchasedByPlayer ? Math.floor(target.maxRam * PERSONAL_SERVER_SHARE) : 0;
 
 			this.used += used;
 			this.free += free;

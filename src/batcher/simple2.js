@@ -25,10 +25,10 @@ async function Prepare(ns, target) {
 
 		if(hackDifficulty !== minDifficulty) {
 			ns.print(`${DEFAULT_COLOR}[!] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
-			pids.push(RunScript(ns, "weaken.js", target, GetWeakThreads(ns, target), true));
+			pids.push(...RunScript(ns, "weaken.js", target, GetWeakThreads(ns, target), true));
 		}else if(moneyAvailable !== moneyMax) {
 			ns.print(`${DEFAULT_COLOR}[!] Cash at ${ns.nFormat(moneyAvailable, "$0.00a")}/${ns.nFormat(moneyMax, "$0.00a")}`);
-			pids.push(RunScript(ns, "grow.js", target, CalcGrowThreadsL(ns, target, moneyMax - moneyAvailable), true));
+			pids.push(...RunScript(ns, "grow.js", target, CalcGrowThreadsL(ns, target, moneyMax - moneyAvailable), true));
 		}
 
 		await SleepPids(ns, pids);
@@ -75,7 +75,7 @@ export async function main(ns) {
 	if(hackPct <= 0 || hackPct > 1)
 		return ns.tprint("The hack percent must be > 0 and <= 1.");
 
-	const ram = new RAM();
+	const ram = new RAM(ns);
 	const required = GetBatchRamL(ns, target, hackPct);
 
 	if(required >= ram.free)
