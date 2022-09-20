@@ -1,208 +1,212 @@
 import {
-	HACK_RAM, WEAKEN_GROW_RAM, MONEY_PER_HACK, SAFETY_DELAY
+	WEAKEN_GROW_RAM, HACK_RAM, IDS, TIME_RATIOS,
+	MONEY_PER_HACK, SAFETY_DELAY, RETRY_AFTER, CONSOLE_COLORS,
+	DEFAULT_COLOR
 } from "constants.js";
-import {ScanAll, SleepPids, CalcGrowThreadsL} from "utility.js";
+import {SleepPids} from "utility.js";
+import RAM from "batcher/ram.js";
+import RunScript from "batcher/run-script.js";
+import {GetWeakThreads, GetGrowThreadsL, GetThreadsL} from "batcher/threads.js";
+
+/** @param {import("../").NS} ns */
+function EnoughRAM(ns, target, hackPct) {
+	const ram = new RAM(ns);
+	const threads = GetThreadsL(ns, target, hackPct);
+	const weakRam = (threads[IDS.W1] + threads[IDS.W2]) * WEAKEN_GROW_RAM;
+	const growRam = threads[IDS.G] * WEAKEN_GROW_RAM;
+	const hackRam = threads[IDS.H] * HACK_RAM;
+	const growMsg = `a server with ${ns.nFormat(growRam * 1e9, "0.00b")} RAM`;
+	let result = ram.Smallest(growRam);
+
+	if(result.server == null)
+		return growMsg;
+	else
+		ram.Reserve(result.server, result.size);
+
+	result = ram.Smallest(hackRam);
+
+	if(result.server == null)
+		return `${growMsg} and another with ${ns.nFormat(hackRam * 1e9, "0.00b")} RAM`;
+	else
+		ram.Reserve(result.server, result.size);
+
+	if(ram.free - ram.reserved < weakRam)
+		return `a total of ${ns.nFormat((weakRam + growRam + hackRam) * 1e9)} RAM`;
+	else
+		return "";
+}
+
+/** @param {import("../").NS} ns */
+async function Prepare(ns, target) {
+	let server;
+	let already = true;
+
+	while((server = ns.getServer(target)).hackDifficulty !== server.minDifficulty
+			|| server.moneyAvailable !== server.moneyMax) {
+		const {hackDifficulty, minDifficulty, moneyAvailable, moneyMax} = server;
+		const pids = [];
+
+		if(already) {
+			already = false;
+			ns.print(`${DEFAULT_COLOR}[-] Preparing server...`);
+		}
+
+		if(hackDifficulty !== minDifficulty) {
+			const threads = GetWeakThreads(hackDifficulty - minDifficulty);
+
+			ns.print(`${DEFAULT_COLOR}[!] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
+			pids.push(...RunScript(ns, "weaken.js", target, threads, true));
+		}else if(moneyAvailable !== moneyMax) {
+			const threads = GetGrowThreadsL(ns, target, moneyMax - moneyAvailable);
+
+			ns.print(`${DEFAULT_COLOR}[!] Cash at ${ns.nFormat(moneyAvailable, "$0.00a")}/${ns.nFormat(moneyMax, "$0.00a")}`);
+			pids.push(...RunScript(ns, "grow.js", target, threads, true));
+		}
+
+		await SleepPids(ns, pids);
+	}
+
+	if(!already)
+		ns.print(`${DEFAULT_COLOR}[-] Server prepared.`);
+}
+
+/** @param {import("../").NS} ns */
+async function SleepLevelChange(ns, target, which, time) {
+	const extra = time - (ns.getHackTime(target)
+		* (which === IDS.W2 ? TIME_RATIOS.WEAKEN : which === IDS.G ? TIME_RATIOS.GROW : 1));
+
+	await ns.asleep(extra);
+
+	return extra;
+}
+
+function GetWhich(which, number = false) {
+	if(number) {
+		switch(which) {
+			case IDS.H:
+				return 0;
+			case IDS.W1:
+				return 1;
+			case IDS.G:
+				return 2;
+			case IDS.W2:
+				return 3;
+		}
+	}
+
+	switch(which) {
+		case IDS.W1:
+		case IDS.W2:
+			return "Weaken";
+		case IDS.G:
+			return "Grow";
+		case IDS.H:
+			return "Hack";
+	}
+}
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
 
-	const target = ns.args[0];
-	const pctMoneyPerHack = ns.args[1] ?? MONEY_PER_HACK;
+	const [target, hackPct = MONEY_PER_HACK] = ns.args;
+
+	try {
+		ns.getServer(target);
+	}catch{
+		return ns.tprint(`Server "${target}" doesn't exist.`);
+	}
+
+	if(hackPct <= 0 || hackPct > 1)
+		return ns.tprint("The hack percent must be > 0 and <= 1.");
+
+	await Prepare(ns, target);
+
+	const enough = EnoughRAM(ns, target, hackPct);
+
+	if(enough !== "")
+		return ns.tprint(`You need ${enough} to hack at ${hackPct * 100}%.`);
 
 	while(true) {
 		await Prepare(ns, target);
 
-		const hackingLevel = ns.getHackingLevel();
-		const weakenT = ns.getWeakenTime(target);
-		const growT = ns.getGrowTime(target);
 		const hackT = ns.getHackTime(target);
-		const moneyPerHack = ns.getServerMaxMoney(target) * pctMoneyPerHack;
-		const growThreads = CalcGrowThreadsL(
-			ns,
-			target,
-			moneyPerHack,
-			1,
-			{moneyAvailable: ns.getServerMaxMoney(target) - moneyPerHack}
-		);
-		let hackThreads = Math.floor(ns.hackAnalyzeThreads(target, moneyPerHack));
-		const hackWeakenThreads = Math.ceil(ns.hackAnalyzeSecurity(hackThreads) / ns.weakenAnalyze(1));
-		const growWeakenThreads = Math.ceil(ns.growthAnalyzeSecurity(growThreads) / ns.weakenAnalyze(1));
-		const pids = [];
-		let result = RunScript(ns, "weaken.js", target, hackWeakenThreads);
-		let adjustedT = 0;
-		let finished = true;
+		const weakT = hackT * TIME_RATIOS.WEAKEN;
+		const growT = hackT * TIME_RATIOS.GROW;
+		let extraT = 0;
+		const level = ns.getPlayer().skills.hacking;
+		const threads = GetThreadsL(ns, target, hackPct);
+		const pids = {};
+		let result = RunScript(ns, "weaken.js", target, threads[IDS.W1]);
 
-		if(result.hosted === hackWeakenThreads) {
-			pids.push(...result.pids);
-			SleepPids(ns, result.pids).then(() => {
-				if(finished)
-					ns.print(`[2] weaken.js x${hackWeakenThreads} finished.`);
-			});
-		}else{
-			ns.print(`[!] weaken.js (1) x${hackWeakenThreads} failed. Waiting 60s...`);
-			await ns.asleep(6e4);
+		if(result.length === 0) {
+			ns.print(`${CONSOLE_COLORS[IDS.W1]}[!] Weaken x${threads[IDS.W1]} failed. Waiting ${RETRY_AFTER[1]}...`);
+			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
+		}else{
+			pids[IDS.W1] = result;
 		}
 
 		await ns.asleep(SAFETY_DELAY * 2);
 
-		if(ns.getHackingLevel() !== hackingLevel) {
-			const extraT = weakenT - ns.getWeakenTime(target);
+		if(level !== ns.getPlayer().skills.hacking)
+			extraT += await SleepLevelChange(ns, target, IDS.W2, weakT);
 
-			adjustedT += extraT;
-			await ns.asleep(extraT);
-		}
+		result = RunScript(ns, "weaken.js", target, threads[IDS.W2]);
 
-		result = RunScript(ns, "weaken.js", target, growWeakenThreads);
-
-		if(result.hosted === growWeakenThreads) {
-			pids.push(...result.pids);
-			SleepPids(ns, result.pids).then(() => {
-				if(finished)
-					ns.print(`[4] weaken.js x${growWeakenThreads} finished.`);
-			});
-		}else{
-			ns.print(`[!] weaken.js (2) x${growWeakenThreads} failed. Waiting 60s...`);
-			finished = false;
-			ScanAll(ns).forEach(s => ns.kill("weaken.js", s, target));
-			await ns.asleep(6e4);
+		if(result.length === 0) {
+			ns.print(`${CONSOLE_COLORS[IDS.W2]}[!] Weaken x${threads[IDS.W2]} failed. Waiting ${RETRY_AFTER[1]}...`);
+			pids[IDS.W1].forEach(pid => ns.kill(pid));
+			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
-		}
-
-		await ns.asleep(weakenT - growT - SAFETY_DELAY - adjustedT);
-
-		if(ns.getHackingLevel() !== hackingLevel) {
-			const extraT = growT - ns.getGrowTime(target);
-
-			adjustedT += extraT;
-			await ns.asleep(extraT);
-		}
-
-		result = RunScript(ns, "grow.js", target, growThreads);
-
-		if(result.hosted === growThreads) {
-			pids.push(...result.pids);
-			SleepPids(ns, result.pids).then(() => {
-				if(finished)
-					ns.print(`[3] grow.js x${growThreads} finished.`);
-			});
 		}else{
-			ns.print(`[!] grow.js x${growThreads} failed. Waiting 60s...`);
-			finished = false;
-			ScanAll(ns).forEach(s => {
-				ns.kill("weaken.js", s, target);
-				ns.kill("grow.js", s, target);
-			});
-			await ns.asleep(6e4);
+			pids[IDS.W2] = result;
+		}
+
+		await ns.asleep(weakT - growT - SAFETY_DELAY - extraT);
+
+		if(level !== ns.getPlayer().skills.hacking)
+			extraT += await SleepLevelChange(ns, target, IDS.G, growT);
+
+		result = RunScript(ns, "grow.js", target, threads[IDS.G]);
+
+		if(result.length === 0) {
+			ns.print(`${CONSOLE_COLORS[IDS.G]}[!] Grow x${threads[IDS.G]} failed. Waiting ${RETRY_AFTER[1]}...`);
+			Object.values(pids).flat().forEach(pid => ns.kill(pid));
+			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
-		}
-
-		await ns.asleep(growT - hackT - (SAFETY_DELAY * 2) - adjustedT);
-
-		if(ns.getHackingLevel() !== hackingLevel) {
-			const extraT = ns.nFormat(hackT - ns.getHackTime(target), "0.00");
-
-			await ns.asleep(extraT);
-			hackThreads = Math.floor(ns.hackAnalyzeThreads(target, moneyPerHack));
-		}
-
-		result = RunScript(ns, "hack.js", target, hackThreads);
-
-		if(result.hosted === hackThreads) {
-			pids.push(...result.pids);
-			SleepPids(ns, result.pids).then(() => {
-				if(finished)
-					ns.print(`[1] hack.js x${hackThreads} finished.`);
-			});
 		}else{
-			ns.print(`[!] hack.js x${hackThreads} failed. Waiting 60s...`);
-			finished = false;
-			ScanAll(ns).forEach(s => {
-				ns.kill("weaken.js", s, target);
-				ns.kill("grow.js", s, target);
-				ns.kill("hack.js", s, target);
-			});
-			await ns.asleep(6e4);
+			pids[IDS.G] = result;
+		}
+
+		await ns.asleep(growT - hackT - (SAFETY_DELAY * 2) - extraT);
+
+		if(level !== ns.getPlayer().skills.hacking)
+			extraT += await SleepLevelChange(ns, target, IDS.H, hackT);
+
+		result = RunScript(ns, "hack.js", target, threads[IDS.H]);
+
+		if(result.length === 0) {
+			ns.print(`${CONSOLE_COLORS[IDS.H]}[!] Hack x${threads[IDS.H]} failed. Waiting ${RETRY_AFTER[1]}...`);
+			Object.values(pids).flat().forEach(pid => ns.kill(pid));
+			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
+		}else{
+			pids[IDS.H] = result;
 		}
 
-		await SleepPids(ns, pids);
+		for(let id = IDS.W1; id <= IDS.H; id++) {
+			const num = GetWhich(id, true);
+
+			SleepPids(ns, pids[id]).then(() => ns.print(`${CONSOLE_COLORS[num]}[${num + 1}] ${GetWhich(id)} ended.`));
+		}
+
+		await SleepPids(ns, Object.values(pids).flat());
 		await ns.asleep(SAFETY_DELAY);
-		ns.print("[-] Batch completed!");
-	}
-}
-
-/** @param {import("../").NS} ns */
-function GetFreeRam(ns, server) {
-	return ns.getServerMaxRam(server) - ns.getServerUsedRam(server);
-}
-
-/** @param {import("../").NS} ns */
-function RunScript(ns, script, target, threads, single = false) {
-	const list = ScanAll(ns).filter(p => ns.hasRootAccess(p) && ns.getServerMaxRam(p) > 0);
-	const threadRam = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
-	const pids = [];
-	let hosted = 0;
-
-	list.sort((a, b) => GetFreeRam(ns, b) - GetFreeRam(ns, a));
-
-	for(const host of list) {
-		const freeRam = GetFreeRam(ns, host);
-		let threadCount = Math.floor(freeRam / threadRam);
-
-		if(threadCount === 0)
-			continue;
-		else if(threadCount > threads - hosted)
-			threadCount = threads - hosted;
-		else if(single && threadCount !== threads)
-			break;
-
-		const pid = ns.exec(script, host, threadCount, target, Math.random().toString(16).slice(-6));
-
-		if(pid !== 0) {
-			pids.push(pid);
-			hosted += threadCount;
-
-			if(hosted >= threads)
-				break;
-		}
-	}
-
-	return {hosted, pids};
-}
-
-/** @param {import("../").NS} ns */
-async function Prepare(ns, target) {
-	while(true) {
-		const atMinSecurity = ns.getServerMinSecurityLevel(target) === ns.getServerSecurityLevel(target);
-		const atMaxMoney = ns.getServerMaxMoney(target) === ns.getServerMoneyAvailable(target);
-
-		if(atMinSecurity && atMaxMoney)
-			break;
-
-		const pids = [];
-
-		if(!atMinSecurity) {
-			const minSec = ns.getServerMinSecurityLevel(target);
-			const sec = ns.getServerSecurityLevel(target);
-			const threads = Math.ceil((sec - minSec) / ns.weakenAnalyze(1));
-
-			ns.print(`[!] ${ns.nFormat(sec, "(0.00)")} security level, desired is ${ns.nFormat(minSec, "(0.00)")}.`);
-			pids.push(...RunScript(ns, "weaken.js", target, threads).pids);
-		}else if(!atMaxMoney) {
-			const money = ns.getServerMoneyAvailable(target);
-			const maxMoney = ns.getServerMaxMoney(target);
-			const threads = CalcGrowThreadsL(ns, target, maxMoney - money);
-
-			ns.print(`[!] ${ns.nFormat(money, "$0.00a")}/${ns.nFormat(maxMoney, "$0.00a")} money held.`);
-			pids.push(...RunScript(ns, "grow.js", target, threads).pids);
-		}
-
-		await SleepPids(ns, pids);
+		ns.print(`${CONSOLE_COLORS[IDS.H + 1]}[-] Batch completed.`);
 	}
 }
