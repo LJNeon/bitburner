@@ -40,9 +40,9 @@ export const RETRY_AFTER = [60_000, "60s"];
 // Range in hacking skill levels that should be handled before the batcher needs to restart.
 export const HACK_LEVEL_RANGE = 20;
 // GBs of total RAM across all accessible servers where small servers lose priority for scripts.
-export const FOCUS_SMALL_THRESHOLD = 1_000;
+export const FOCUS_SMALL_THRESHOLD = 10_000;
 // GBs of total RAM across all accessible servers where a chain batcher is considered viable.
-export const CHAIN_VIABLE_THRESHOLD = 100_000;
+export const CHAIN_VIABLE_THRESHOLD = 1_000_000;
 // Default color to use when logging.
 export const DEFAULT_COLOR = "\u001b[38;5;250m";
 // List of colors to use when logging batches.

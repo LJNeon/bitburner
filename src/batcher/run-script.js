@@ -1,47 +1,52 @@
 import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "constants.js";
-import {GenID} from "utility.js";
 import RAM from "batcher/ram.js";
 
 /** @param {import("../").NS} ns */
-export default function RunScript(ns, script, server, threadCount, partial = false) {
+export default function RunScript(ns, script, target, threadCount, partial = false) {
 	const ram = new RAM(ns);
 	const threadRam = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
 	const spread = script === "weaken.js";
-	const pids = [];
+	let hosts = {};
 	let hosted = 0;
 
 	while(hosted < threadCount) {
-		const freeRam = ram.free <= FOCUS_SMALL_THRESHOLD ? ram.Smallest(threadRam * threadCount) : ram.Largest();
-		let threads = Math.floor(freeRam / threadRam);
+		const {server, size} = ram.free <= FOCUS_SMALL_THRESHOLD ? ram.Smallest(threadRam * threadCount) : ram.Largest();
+		let threads = Math.floor(size / threadRam);
 
 		if(threads === 0)
 			break;
 		else if(threads > threadCount - hosted)
 			threads = threadCount - hosted;
-		else if(!spread && threads !== threadCount)
+
+		ram.Reserve(server, size);
+		hosts[server] = threads;
+		hosted += threads;
+
+		if(hosted >= threadCount)
 			break;
+	}
 
-		const host = ram.Reserve(freeRam);
+	if(!partial && hosted !== threadCount) {
+		return [];
+	}else if(!spread && Object.keys(hosts).length > 1) {
+		if(partial) {
+			let largest;
 
-		if(host == null)
-			break;
+			for(const host in hosts) {
+				if(largest == null || hosts[host] > largest.threads)
+					largest = {host, threads: hosts[host]};
+			}
 
-		const pid = ns.exec(script, host, threads, server, GenID());
-
-		if(pid !== 0) {
-			pids.push(pid);
-			hosted += threads;
-
-			if(hosted >= threadCount)
-				break;
+			hosts = {[largest.host]: largest.threads};
+		}else{
+			return [];
 		}
 	}
 
-	if(!partial && hosted < threadCount) {
-		pids.forEach(pid => ns.kill(pid));
+	const pids = [];
 
-		return [];
-	}
+	for(const host in hosts)
+		pids.push(ns.exec(script, host, hosts[host], target, Math.random().toString(16).slice(-8)));
 
 	return pids;
 }

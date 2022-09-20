@@ -1,12 +1,40 @@
 import {
-	IDS, TIME_RATIOS, MONEY_PER_HACK, SAFETY_DELAY,
-	RETRY_AFTER, CONSOLE_COLORS, DEFAULT_COLOR
+	WEAKEN_GROW_RAM, HACK_RAM, IDS, TIME_RATIOS,
+	MONEY_PER_HACK, SAFETY_DELAY, RETRY_AFTER, CONSOLE_COLORS,
+	DEFAULT_COLOR
 } from "constants.js";
-import {
-	SleepPids, GetWeakThreads, CalcGrowThreadsL, GetThreadsL, GetBatchRamL
-} from "utility.js";
+import {SleepPids} from "utility.js";
 import RAM from "batcher/ram.js";
 import RunScript from "batcher/run-script.js";
+import {GetWeakThreads, GetGrowThreadsL, GetThreadsL} from "batcher/threads.js";
+
+/** @param {import("../").NS} ns */
+function EnoughRAM(ns, target, hackPct) {
+	const ram = new RAM(ns);
+	const threads = GetThreadsL(ns, target, hackPct);
+	const weakRam = (threads[IDS.W1] + threads[IDS.W2]) * WEAKEN_GROW_RAM;
+	const growRam = threads[IDS.G] * WEAKEN_GROW_RAM;
+	const hackRam = threads[IDS.H] * HACK_RAM;
+	const growMsg = `a server with ${ns.nFormat(growRam * 1e9, "0.00b")} RAM`;
+	let result = ram.Smallest(growRam);
+
+	if(result.server == null)
+		return growMsg;
+	else
+		ram.Reserve(result.server, result.size);
+
+	result = ram.Smallest(hackRam);
+
+	if(result.server == null)
+		return `${growMsg} and another with ${ns.nFormat(hackRam * 1e9, "0.00b")} RAM`;
+	else
+		ram.Reserve(result.server, result.size);
+
+	if(ram.free - ram.reserved < weakRam)
+		return `a total of ${ns.nFormat((weakRam + growRam + hackRam) * 1e9)} RAM`;
+	else
+		return "";
+}
 
 /** @param {import("../").NS} ns */
 async function Prepare(ns, target) {
@@ -24,11 +52,15 @@ async function Prepare(ns, target) {
 		}
 
 		if(hackDifficulty !== minDifficulty) {
+			const threads = GetWeakThreads(hackDifficulty - minDifficulty);
+
 			ns.print(`${DEFAULT_COLOR}[!] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
-			pids.push(...RunScript(ns, "weaken.js", target, GetWeakThreads(ns, target), true));
+			pids.push(...RunScript(ns, "weaken.js", target, threads, true));
 		}else if(moneyAvailable !== moneyMax) {
+			const threads = GetGrowThreadsL(ns, target, moneyMax - moneyAvailable);
+
 			ns.print(`${DEFAULT_COLOR}[!] Cash at ${ns.nFormat(moneyAvailable, "$0.00a")}/${ns.nFormat(moneyMax, "$0.00a")}`);
-			pids.push(...RunScript(ns, "grow.js", target, CalcGrowThreadsL(ns, target, moneyMax - moneyAvailable), true));
+			pids.push(...RunScript(ns, "grow.js", target, threads, true));
 		}
 
 		await SleepPids(ns, pids);
@@ -43,12 +75,25 @@ async function SleepLevelChange(ns, target, which, time) {
 	const extra = time - (ns.getHackTime(target)
 		* (which === IDS.W2 ? TIME_RATIOS.WEAKEN : which === IDS.G ? TIME_RATIOS.GROW : 1));
 
-	await ns.sleep(extra);
+	await ns.asleep(extra);
 
 	return extra;
 }
 
-function GetName(which) {
+function GetWhich(which, number = false) {
+	if(number) {
+		switch(which) {
+			case IDS.H:
+				return 0;
+			case IDS.W1:
+				return 1;
+			case IDS.G:
+				return 2;
+			case IDS.W2:
+				return 3;
+		}
+	}
+
 	switch(which) {
 		case IDS.W1:
 		case IDS.W2:
@@ -75,11 +120,12 @@ export async function main(ns) {
 	if(hackPct <= 0 || hackPct > 1)
 		return ns.tprint("The hack percent must be > 0 and <= 1.");
 
-	const ram = new RAM(ns);
-	const required = GetBatchRamL(ns, target, hackPct);
+	await Prepare(ns, target);
 
-	if(required >= ram.free)
-		return ns.tprint(`Hacking "${target}" at ${hackPct * 100}% requires ${ns.nFormat(required, "0.00b")} of free RAM.`);
+	const enough = EnoughRAM(ns, target, hackPct);
+
+	if(enough !== "")
+		return ns.tprint(`You need ${enough} to hack at ${hackPct * 100}%.`);
 
 	while(true) {
 		await Prepare(ns, target);
@@ -95,14 +141,14 @@ export async function main(ns) {
 
 		if(result.length === 0) {
 			ns.print(`${CONSOLE_COLORS[IDS.W1]}[!] Weaken x${threads[IDS.W1]} failed. Waiting ${RETRY_AFTER[1]}...`);
-			await ns.sleep(RETRY_AFTER[0]);
+			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
 		}else{
 			pids[IDS.W1] = result;
 		}
 
-		await ns.sleep(SAFETY_DELAY * 2);
+		await ns.asleep(SAFETY_DELAY * 2);
 
 		if(level !== ns.getPlayer().skills.hacking)
 			extraT += await SleepLevelChange(ns, target, IDS.W2, weakT);
@@ -112,14 +158,14 @@ export async function main(ns) {
 		if(result.length === 0) {
 			ns.print(`${CONSOLE_COLORS[IDS.W2]}[!] Weaken x${threads[IDS.W2]} failed. Waiting ${RETRY_AFTER[1]}...`);
 			pids[IDS.W1].forEach(pid => ns.kill(pid));
-			await ns.sleep(RETRY_AFTER[0]);
+			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
 		}else{
 			pids[IDS.W2] = result;
 		}
 
-		await ns.sleep(weakT - growT - SAFETY_DELAY - extraT);
+		await ns.asleep(weakT - growT - SAFETY_DELAY - extraT);
 
 		if(level !== ns.getPlayer().skills.hacking)
 			extraT += await SleepLevelChange(ns, target, IDS.G, growT);
@@ -129,14 +175,14 @@ export async function main(ns) {
 		if(result.length === 0) {
 			ns.print(`${CONSOLE_COLORS[IDS.G]}[!] Grow x${threads[IDS.G]} failed. Waiting ${RETRY_AFTER[1]}...`);
 			Object.values(pids).flat().forEach(pid => ns.kill(pid));
-			await ns.sleep(RETRY_AFTER[0]);
+			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
 		}else{
 			pids[IDS.G] = result;
 		}
 
-		await ns.sleep(growT - hackT - (SAFETY_DELAY * 2) - extraT);
+		await ns.asleep(growT - hackT - (SAFETY_DELAY * 2) - extraT);
 
 		if(level !== ns.getPlayer().skills.hacking)
 			extraT += await SleepLevelChange(ns, target, IDS.H, hackT);
@@ -146,17 +192,21 @@ export async function main(ns) {
 		if(result.length === 0) {
 			ns.print(`${CONSOLE_COLORS[IDS.H]}[!] Hack x${threads[IDS.H]} failed. Waiting ${RETRY_AFTER[1]}...`);
 			Object.values(pids).flat().forEach(pid => ns.kill(pid));
-			await ns.sleep(RETRY_AFTER[0]);
+			await ns.asleep(RETRY_AFTER[0]);
 
 			continue;
 		}else{
 			pids[IDS.H] = result;
 		}
 
-		for(let id = IDS.W1; id <= IDS.H; id++)
-			SleepPids(ns, pids[id]).then(() => ns.print(`${CONSOLE_COLORS[id]}[${id}] ${GetName(id)} ended.`));
+		for(let id = IDS.W1; id <= IDS.H; id++) {
+			const num = GetWhich(id, true);
 
-		await ns.sleep(SAFETY_DELAY);
+			SleepPids(ns, pids[id]).then(() => ns.print(`${CONSOLE_COLORS[num]}[${num + 1}] ${GetWhich(id)} ended.`));
+		}
+
+		await SleepPids(ns, Object.values(pids).flat());
+		await ns.asleep(SAFETY_DELAY);
 		ns.print(`${CONSOLE_COLORS[IDS.H + 1]}[-] Batch completed.`);
 	}
 }

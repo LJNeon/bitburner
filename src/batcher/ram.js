@@ -9,6 +9,7 @@ export default class RAM {
 		this.chunks = [];
 		this.used = 0;
 		this.free = 0;
+		this.reserved = 0;
 		this.total = 0;
 
 		for(const server of servers) {
@@ -20,9 +21,11 @@ export default class RAM {
 			const used = simulateMax ? 0 : target.ramUsed;
 			const free = target.maxRam - used;
 			const shared = target.purchasedByPlayer ? Math.floor(target.maxRam * PERSONAL_SERVER_SHARE) : 0;
+			const reserved = server === "home" ? MIN_HOME_RAM : shared;
 
 			this.used += used;
 			this.free += free;
+			this.reserved += reserved;
 			this.total += target.maxRam;
 
 			if(free >= 0) {
@@ -31,7 +34,7 @@ export default class RAM {
 					used,
 					free,
 					total: target.maxRam,
-					reserved: server === "home" ? MIN_HOME_RAM : shared,
+					reserved,
 					bought: target.purchasedByPlayer
 				});
 			}
@@ -49,40 +52,47 @@ export default class RAM {
 		});
 	}
 
-	Reserve(size) {
-		const match = this.chunks.find(c => (c.free - c.reserved) >= size);
+	Reserve(server, size) {
+		const match = this.chunks.find(c => c.server === server);
 
-		if(match == null)
-			return null;
+		if(match == null || match.free - match.used >= size)
+			return false;
 
 		match.reserved += size;
+		this.reserved += size;
 
-		return match.server;
+		return true;
 	}
 
 	Smallest(min = 0) {
-		let smallest = this.Largest();
+		let server;
+		let size = 0;
 
 		for(const chunk of this.chunks) {
 			const free = chunk.free - chunk.reserved;
 
-			if(free < smallest && free >= min)
-				smallest = free;
+			if((server == null || free < size) && free >= min) {
+				server = chunk.server;
+				size = free;
+			}
 		}
 
-		return smallest;
+		return {server, size};
 	}
 
 	Largest() {
-		let largest = 0;
+		let server;
+		let size = 0;
 
 		for(const chunk of this.chunks) {
 			const free = chunk.free - chunk.reserved;
 
-			if(free > largest)
-				largest = free;
+			if(server == null || free > size) {
+				server = chunk.server;
+				size = free;
+			}
 		}
 
-		return largest;
+		return {server, size};
 	}
 }
