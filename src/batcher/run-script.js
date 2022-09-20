@@ -1,4 +1,4 @@
-import {WEAKEN_GROW_RAM, HACK_RAM} from "constants.js";
+import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "constants.js";
 import RAM from "batcher/ram.js";
 
 /** @param {import("../").NS} ns */
@@ -10,7 +10,10 @@ export default function RunScript(ns, script, target, threads, partial = false) 
 		.map(({name, free, reserved}) => ({name, threads: Math.floor((free - reserved) / threadRAM)}))
 		.filter(s => s.threads > 0);
 
-	servers.sort((a, b) => a.threads - b.threads);
+	if(ram.free - ram.reserved >= FOCUS_SMALL_THRESHOLD)
+		servers.sort((a, b) => b.threads - a.threads);
+	else
+		servers.sort((a, b) => a.threads - b.threads);
 
 	if(servers.length === 0) {
 		return null;
