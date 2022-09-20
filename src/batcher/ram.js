@@ -2,7 +2,7 @@ import {MIN_HOME_RAM, PERSONAL_SERVER_SHARE} from "constants.js";
 import {ScanAll} from "utility.js";
 
 /** @param {import("../").NS} ns */
-export class RAM {
+export default class RAM {
 	constructor(ns, simulateMax = false) {
 		const servers = ScanAll(ns).filter(s => ns.hasRootAccess(s));
 

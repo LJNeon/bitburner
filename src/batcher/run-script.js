@@ -1,9 +1,9 @@
 import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "constants.js";
 import {GenID} from "utility.js";
-import {RAM} from "batcher/ram.js";
+import RAM from "batcher/ram.js";
 
 /** @param {import("../").NS} ns */
-export function RunScript(ns, script, server, threadCount, partial = false) {
+export default function RunScript(ns, script, server, threadCount, partial = false) {
 	const ram = new RAM(ns);
 	const threadRam = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
 	const spread = script === "weaken.js";

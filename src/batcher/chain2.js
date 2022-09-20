@@ -5,10 +5,10 @@ import {
 import {
 	CheckPids, GetWeakThreads, GetGrowThreads, GetThreads
 } from "utility.js";
-import {RAM} from "batcher/ram.js";
-import {RunScript} from "batcher/run-script.js";
+import RAM from "batcher/ram.js";
+import RunScript from "batcher/run-script.js";
 import {CalcPeriodDepth, CalcDelayS} from "batcher/stalefish.js";
-import {FindBestServer} from "tools/best-target.js";
+import FindBestServer from "tools/best-target.js";
 
 const W1 = 0;
 const W2 = 1;
@@ -16,7 +16,7 @@ const G = 2;
 const H = 3;
 const scripts = ["weaken.js", "weaken.js", "grow.js", "hack.js"];
 
-export class Scheduler {
+class Scheduler {
 	constructor() {
 		this.lastID = 0;
 		this.tasks = new Map();
@@ -65,7 +65,7 @@ export class Scheduler {
 		for(const [id, task] of this.tasks.entries()) {
 			if(task.createdAt + task.delay <= now) {
 				this.tasks.delete(id);
-				task.run(task, now);
+				task.run(now - task.createdAt + task.delay);
 			}
 		}
 	}
@@ -175,7 +175,7 @@ class Batcher {
 		this.scheduler.Clear();
 	}
 
-	CancelBatch(id, which, diff) {
+	CancelTask(id, which, diff) {
 		const batch = this.batches.get(id);
 
 		if(which === W2 || which === G) {
@@ -201,12 +201,11 @@ class Batcher {
 		for(let i = W1; i <= H; i++) {
 			const which = i;
 
-			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], (task, at) => {
-				const lateBy = at - task.createdAt + task.delay;
+			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], lateBy => {
 				const aboveMinSec = which !== W1 && which !== W2
 					&& this.ns.getServerMinSecurityLevel(this.server) < this.ns.getServerSecurityLevel(this.server);
 
-				if((lateBy >= SAFETY_THRESHOLD || aboveMinSec) && this.CancelBatch(id, which, aboveMinSec || lateBy))
+				if((lateBy >= SAFETY_THRESHOLD || aboveMinSec) && this.CancelTask(id, which, aboveMinSec || lateBy))
 					return;
 
 				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which]);
@@ -230,9 +229,7 @@ class Batcher {
 
 			if(batch.finished.every(f => f)) {
 				this.batches.delete(id);
-
-				if(!batch.cancelled)
-					this.ns.print(`${color}[-] Batch ${id + 1} completed.`);
+				this.ns.print(`${color}[-] Batch ${id + 1} ${batch.cancelled ? "partially " : ""}completed.`);
 			}
 		}
 	}
