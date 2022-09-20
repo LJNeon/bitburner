@@ -1,19 +1,14 @@
 import {
-	MONEY_PER_HACK, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, CHAIN_VIABLE_THRESHOLD,
-	DEFAULT_COLOR, CONSOLE_COLORS
+	MONEY_PER_HACK, IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE,
+	CHAIN_VIABLE_THRESHOLD, DEFAULT_COLOR, CONSOLE_COLORS
 } from "constants.js";
-import {
-	CheckPids, GetWeakThreads, GetGrowThreads, GetThreads
-} from "utility.js";
+import {CheckPids} from "utility.js";
 import RAM from "batcher/ram.js";
 import RunScript from "batcher/run-script.js";
 import {CalcPeriodDepth, CalcDelayS} from "batcher/stalefish.js";
+import {GetWeakThreads, GetGrowThreads, GetThreads} from "batcher/threads.js";
 import FindBestServer from "tools/best-target.js";
 
-const W1 = 0;
-const W2 = 1;
-const G = 2;
-const H = 3;
 const scripts = ["weaken.js", "weaken.js", "grow.js", "hack.js"];
 
 class Scheduler {
@@ -107,25 +102,25 @@ class Batcher {
 
 	GetName(which) {
 		switch(which) {
-			case W1:
-			case W2:
+			case IDS.W1:
+			case IDS.W2:
 				return "Weaken";
-			case G:
+			case IDS.G:
 				return "Grow";
-			case H:
+			case IDS.H:
 				return "Hack";
 		}
 	}
 
 	EndOrder(which) {
 		switch(which) {
-			case H:
+			case IDS.H:
 				return "1";
-			case W1:
+			case IDS.W1:
 				return "2";
-			case G:
+			case IDS.G:
 				return "3";
-			case W2:
+			case IDS.W2:
 				return "4";
 		}
 	}
@@ -142,15 +137,15 @@ class Batcher {
 
 		if(server.hackDifficulty > server.minDifficulty) {
 			const threads = GetWeakThreads(this.ns, this.server);
-			const sec = this.ns.nFormat(server.hackDifficulty, "0[.00]");
-			const minSec = this.ns.nFormat(server.minDifficulty, "0[.00]");
+			const sec = server.hackDifficulty.toFixed(2);
+			const minSec = server.minDifficulty.toFixed(2);
 
 			this.ns.print(`${DEFAULT_COLOR}[!] ${sec}/${minSec} security.`);
 			pids.push(...RunScript(this.ns, "weaken.js", this.server, threads, true));
 		}else if(server.moneyAvailable < server.moneyMax) {
 			const threads = GetGrowThreads(this.ns, this.server, null, false);
-			const money = this.ns.nFormat(server.moneyAvailable, "$0[.00]a");
-			const moneyMax = this.ns.nFormat(server.moneyMax, "$0[.00]a");
+			const money = this.ns.nFormat(server.moneyAvailable, "$0[.0]a");
+			const moneyMax = this.ns.nFormat(server.moneyMax, "$0[.0]a");
 
 			this.ns.print(`${DEFAULT_COLOR}[!] ${money}/${moneyMax} money.`);
 			pids.push(...RunScript(this.ns, "grow.js", this.server, threads, true));
@@ -178,31 +173,31 @@ class Batcher {
 	CancelTask(id, which, diff) {
 		const batch = this.batches.get(id);
 
-		if(which === W2 || which === G) {
-			this.scheduler.Delete(batch.pending[G]);
-			batch.finished[G] = true;
+		if(which === IDS.W2 || which === IDS.G) {
+			this.scheduler.Delete(batch.pending[IDS.G]);
+			batch.finished[IDS.G] = true;
 		}
 
-		this.scheduler.Delete(batch.pending[H]);
-		batch.finished[H] = true;
+		this.scheduler.Delete(batch.pending[IDS.H]);
+		batch.finished[IDS.H] = true;
 
 		if(!batch.cancelled) {
 			batch.cancelled = true;
 			this.ns.print(`${DEFAULT_COLOR}[!] Batch ${id + 1} cancelled (${diff}).`);
 		}
 
-		return which !== W1 && which !== W2;
+		return which !== IDS.W1 && which !== IDS.W2;
 	}
 
 	StartBatch(now) {
 		const id = this.ran;
 		const batch = {pending: [], pids: [], finished: Array(4).fill(false)};
 
-		for(let i = W1; i <= H; i++) {
+		for(let i = IDS.W1; i <= IDS.H; i++) {
 			const which = i;
 
 			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], lateBy => {
-				const aboveMinSec = which !== W1 && which !== W2
+				const aboveMinSec = which !== IDS.W1 && which !== IDS.W2
 					&& this.ns.getServerMinSecurityLevel(this.server) < this.ns.getServerSecurityLevel(this.server);
 
 				if((lateBy >= SAFETY_THRESHOLD || aboveMinSec) && this.CancelTask(id, which, aboveMinSec || lateBy))
@@ -220,7 +215,7 @@ class Batcher {
 		for(const [id, batch] of this.batches.entries()) {
 			const color = this.GetColor(id);
 
-			for(let i = W1; i <= H; i++) {
+			for(let i = IDS.W1; i <= IDS.H; i++) {
 				if(batch.pids[i] != null && !batch.finished[i] && CheckPids(this.ns, batch.pids[i])) {
 					batch.finished[i] = true;
 					this.ns.print(`${color}[${this.EndOrder(i)}] ${this.GetName(i)} x${this.threads[i]} finished.`);
