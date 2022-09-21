@@ -5,14 +5,15 @@ import RAM from "batcher/ram.js";
 export default function RunScript(ns, script, target, threads, spread = false, partial = false) {
 	const threadRAM = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
 	const ram = new RAM(ns);
+	const focusSmall = ram.free - ram.reserved < FOCUS_SMALL_THRESHOLD;
 	let servers = ram.chunkList
 		.map(({server, free, reserved}) => ({name: server, threads: Math.floor((free - reserved) / threadRAM)}))
 		.filter(s => s.threads > 0);
 
-	if(ram.free - ram.reserved >= FOCUS_SMALL_THRESHOLD)
-		servers.sort((a, b) => b.threads - a.threads);
-	else
+	if(focusSmall)
 		servers.sort((a, b) => a.threads - b.threads);
+	else
+		servers.sort((a, b) => b.threads - a.threads);
 
 	if(servers.length === 0) {
 		return [];
@@ -23,7 +24,7 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 
 		if(server == null) {
 			if(partial)
-				servers = [servers[servers.length - 1]];
+				servers = [servers[focusSmall ? servers.length - 1 : 0]];
 			else
 				return [];
 		}else{
