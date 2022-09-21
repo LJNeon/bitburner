@@ -39,8 +39,11 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 		const spawn = Math.min(server.threads, threads - spawned);
 		const pid = ns.exec(script, server.name, spawn, target, Math.random().toString(16).slice(2));
 
-		if(pid === 0)
+		if(pid === 0) {
+			pids.forEach(id => ns.kill(id));
+
 			throw Error("Failed to execute script!");
+		}
 
 		pids.push(pid);
 		spawned += spawn;
