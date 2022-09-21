@@ -2,9 +2,8 @@ import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "constants.js";
 import RAM from "batcher/ram.js";
 
 /** @param {import("../").NS} ns */
-export default function RunScript(ns, script, target, threads, partial = false) {
+export default function RunScript(ns, script, target, threads, spread = false, partial = false) {
 	const threadRAM = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
-	const spread = script === "weaken.js";
 	const ram = new RAM(ns);
 	let servers = ram.chunkList
 		.map(({server, free, reserved}) => ({name: server, threads: Math.floor((free - reserved) / threadRAM)}))
@@ -16,9 +15,9 @@ export default function RunScript(ns, script, target, threads, partial = false) 
 		servers.sort((a, b) => a.threads - b.threads);
 
 	if(servers.length === 0) {
-		return null;
+		return [];
 	}else if(!partial && servers.reduce((c, s) => c + s.threads, 0) < threads) {
-		return null;
+		return [];
 	}else if(!spread) {
 		const server = servers.find(s => s.threads >= threads);
 
@@ -26,7 +25,7 @@ export default function RunScript(ns, script, target, threads, partial = false) 
 			if(partial)
 				servers = [servers[servers.length - 1]];
 			else
-				return null;
+				return [];
 		}else{
 			servers = [server];
 		}
@@ -37,8 +36,12 @@ export default function RunScript(ns, script, target, threads, partial = false) 
 
 	for(const server of servers) {
 		const spawn = Math.min(server.threads, threads - spawned);
+		const pid = ns.exec(script, server.name, spawn, target, Math.random().toString(16).slice(2));
 
-		pids.push(ns.exec(script, server.name, spawn, target, Math.random().toString(16).slice(2)));
+		if(pid === 0)
+			throw Error("Failed to execute script!");
+
+		pids.push(pid);
 		spawned += spawn;
 
 		if(spawned >= threads)

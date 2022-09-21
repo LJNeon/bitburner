@@ -1,4 +1,4 @@
-import {MIN_HOME_RAM, PERSONAL_SERVER_SHARE} from "constants.js";
+import {MIN_HOME_RAM} from "constants.js";
 import {ScanAll} from "utility.js";
 
 export default class RAM {
@@ -20,8 +20,7 @@ export default class RAM {
 
 			const used = simulateMax ? 0 : target.ramUsed;
 			const free = target.maxRam - used;
-			const shared = target.purchasedByPlayer ? Math.floor(target.maxRam * PERSONAL_SERVER_SHARE) : 0;
-			const reserved = server === "home" ? MIN_HOME_RAM : shared;
+			const reserved = server === "home" ? MIN_HOME_RAM : 0;
 
 			this.used += used;
 			this.free += free;
