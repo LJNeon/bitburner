@@ -1,47 +1,29 @@
-## Dependencies
+# LJ's Bitburner Scripts
 
-[Node.js](https://nodejs.org/en/download) required for installing dependencies.
+## batcher/chain.js
 
-## Installation
+A HWGW JIT chain batcher with clock-sync and stalefish delays.
 
-```bash
-git clone https://github.com/bitburner-official/typescript-template
-npm i
-```
+## batcher/simple.js
 
-## How to use this template
+A HWGW non-chain batcher that prepares after each batch if necessary.
 
-Write all your JavaScript source code in the `/src` directory. Make sure to add the [`bitburner-sync.json`](https://github.com/Nezrahm/bitburner-sync#bitburner-syncjson) file.
+## batcher/xp.js
 
-To update the game with your local files, run `npm run push` in a terminal. To replace local files with the game's files, run `npm run pull`.
+A script that fills up all available RAM with grow calls for maximum XP/sec.
 
-## Imports
+## tools/best-target.js
 
-To ensure the game have no issues with import paths, your import statements should follow a few formatting rules:
+A script that determines the most profitable servers to hack.
 
-- Paths must be absolute from the root of `src/`, which will be equivalent to the root directory of your home drive.
-- Paths must contain no leading slash.
+## tools/buy-server.js
 
-### Examples:
+A script that buys and upgrades personal servers until they're all maxed, and shares a portion of it's ram with the current faction.
 
-To import `helperFunction` from the file `helpers.js` located in the directory `src/lib/`:
+## tools/gain-root.js
 
-```js
-import {helperFunction} from "lib/helpers.js";
-```
+A script that gains root access to every server depending on programs owned.
 
-To import all functions from the file `helpers.js` located in the `src/lib/` directory as the namespace `helpers`:
+## tools/update-share.js
 
-```js
-import * as helpers from "lib/helpers.js";
-```
-
-To import `someFunction` from the file `main.js` located in the `src/` directory:
-
-```js
-import {someFunction} from "main.js";
-```
-
-## Debugging
-
-For debugging bitburner on Steam you will need to enable a remote debugging port. This can be done by right-clicking bitburner in your Steam library and selecting properties. There you need to add `--remote-debugging-port=9222` [Thanks @DarkMio].
+A script that runs share.js again as necessary, usually useful after you're forced to reload and kill all scripts.

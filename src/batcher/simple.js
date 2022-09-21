@@ -31,7 +31,7 @@ function EnoughRAM(ns, target, hackPct) {
 		ram.Reserve(result.server, result.size);
 
 	if(ram.free - ram.reserved < weakRam)
-		return `a total of ${ns.nFormat((weakRam + growRam + hackRam) * 1e9)} RAM`;
+		return `a total of ${ns.nFormat((weakRam + growRam + hackRam) * 1e9), "0.00b"} RAM`;
 	else
 		return "";
 }
