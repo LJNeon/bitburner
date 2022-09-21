@@ -1,4 +1,4 @@
-import {DEFAULT_COLOR} from "constants.js";
+import {TAIL_COLORS, DEFAULT_COLOR} from "constants.js";
 import {ScanAll} from "utility.js";
 
 function VigenereCipher(data) {
@@ -13,6 +13,22 @@ function VigenereCipher(data) {
 			return String.fromCharCode(((c.charCodeAt(0) - 130 + keyword.charCodeAt(i % keyword.length)) % 26) + 65);
 		})
 		.join("");
+}
+
+function JumpingGameI(data) {
+	if(data[0] === 0)
+		return 0;
+
+	const jumps = [1];
+
+	for(let n = 0; n < data.length; n++) {
+		if(jumps[n]) {
+			for(let p = n; p <= Math.min(n + data[n], data.length - 1); p++)
+				jumps[p] = 1;
+		}
+	}
+
+	return Number(Boolean(jumps[data.length - 1]));
 }
 
 function JumpingGameII(data) {
@@ -304,6 +320,170 @@ function ShortestPathInGrid(data) {
 	return path;
 }
 
+function dfs(pair, index, left, right, s, solution, res) {
+	if(s.length === index) {
+		if(left === 0 && right === 0 && pair === 0) {
+			for(let i = 0; i < res.length; i++) {
+				if(res[i] === solution)
+					return;
+
+			}
+
+			res.push(solution);
+		}
+
+		return;
+	}
+
+	if(s[index] === "(") {
+		if(left > 0)
+			dfs(pair, index + 1, left - 1, right, s, solution, res);
+
+		dfs(pair + 1, index + 1, left, right, s, solution + s[index], res);
+	}else if(s[index] === ")") {
+		if(right > 0)
+			dfs(pair, index + 1, left, right - 1, s, solution, res);
+
+		if(pair > 0)
+			dfs(pair - 1, index + 1, left, right, s, solution + s[index], res);
+	}else{
+		dfs(pair, index + 1, left, right, s, solution + s[index], res);
+	}
+}
+
+function SanitizeParentheses(data) {
+	const res = [];
+	let left = 0;
+	let right = 0;
+
+	for(let i = 0; i < data.length; ++i) {
+		if(data[i] === "(")
+			++left;
+		else if(data[i] === ")")
+			left > 0 ? --left : ++right;
+	}
+
+	dfs(0, 0, left, right, data, "", res);
+
+	return res;
+}
+
+function HammingSumOfParity(length) {
+	return length < 3 || length === 0
+		? length === 0 ? 0 : length + 1
+		: Math.ceil(Math.log2(length * 2)) <= Math.ceil(Math.log2(1 + length + Math.ceil(Math.log2(length))))
+			? Math.ceil(Math.log2(length) + 1)
+			: Math.ceil(Math.log2(length));
+}
+
+function HammingCount(arr, val) {
+	return arr.reduce((a, v) => v === val ? a + 1 : a, 0);
+}
+
+function HammingEncode(data) {
+	const dataBits = data.toString(2);
+	const bits = dataBits.split("");
+	const build = [];
+
+	build.push("x", "x", ...bits.splice(0, 1));
+
+	for(let i = 2; i < HammingSumOfParity(dataBits.length); i++)
+		build.push("x", ...bits.splice(0, Math.pow(2, i) - 1));
+
+	for(const index of build.reduce((a, e, i) => (e === "x" ? a.push(i) : i) && a, [])) {
+		const tempCount = index + 1;
+		const tempArray = [];
+		const tempData = [...build];
+
+		while(tempData[index] !== undefined) {
+			const _temp = tempData.splice(index, tempCount * 2);
+
+			tempArray.push(..._temp.splice(0, tempCount));
+		}
+
+		tempArray.splice(0, 1);
+		build[index] = (HammingCount(tempArray, "1") % 2).toString();
+	}
+
+	build.unshift((HammingCount(build, "1") % 2).toString());
+
+	return build.join("");
+}
+
+function HammingDecode(data) {
+	const build = data.split("");
+	const testArray = [];
+	const sumParity = Math.ceil(Math.log2(data.length));
+	let overallParity = build.splice(0, 1).join("");
+
+	testArray.push(overallParity === (HammingCount(build, "1") % 2).toString() ? true : false);
+
+	for(let i = 0; i < sumParity; i++) {
+		const _tempIndex = Math.pow(2, i) - 1;
+		const _tempStep = _tempIndex + 1;
+		const _tempData = [...build];
+		const _tempArray = [];
+
+		while(_tempData[_tempIndex] != null) {
+			const _temp = [..._tempData.splice(_tempIndex, _tempStep * 2)];
+
+			_tempArray.push(..._temp.splice(0, _tempStep));
+		}
+
+		const _tempParity = _tempArray.shift();
+
+		testArray.push(_tempParity === (HammingCount(_tempArray, "1") % 2).toString() ? true : false);
+	}
+
+	let _fixIndex = 0;
+
+	for(let i = 1; i < sumParity + 1; i++)
+		_fixIndex += testArray[i] ? 0 : Math.pow(2, i) / 2;
+
+	build.unshift(overallParity);
+
+	if(_fixIndex > 0 && !testArray[0])
+		build[_fixIndex] = build[_fixIndex] === "0" ? "1" : "0";
+	else if(!testArray[0])
+		overallParity = overallParity === "0" ? "1" : "0";
+	else if(testArray[0] && testArray.some(truth => truth === false))
+		return 0;
+
+	for(let i = sumParity; i >= 0; i--)
+		build.splice(Math.pow(2, i), 1);
+
+	build.splice(0, 1);
+
+	return parseInt(build.join(""), 2);
+}
+
+function LargestPrimeFactor(data) {
+	const factors = [];
+	let num = data;
+	let d = 2;
+
+	while(num > 1) {
+		while(num % d === 0) {
+			factors.push(d);
+			num /= d;
+		}
+
+		d = d + 1;
+
+		if(d * d > num) {
+			if(num > 1)
+				factors.push(num);
+
+			break;
+		}
+	}
+
+	if(factors.length > 0)
+		return factors.pop();
+
+	return "";
+}
+
 /** @param {import("../").NS} ns */
 function FindContracts(ns) {
 	return ScanAll(ns)
@@ -319,6 +499,8 @@ async function AnswerContract(ns, server, contract) {
 	switch(type) {
 		case "Encryption II: Vigenère Cipher":
 			return VigenereCipher(data);
+		case "Array Jumping Game":
+			return JumpingGameI(data);
 		case "Array Jumping Game II":
 			return JumpingGameII(data);
 		case "Generate IP Addresses":
@@ -337,8 +519,16 @@ async function AnswerContract(ns, server, contract) {
 			return MinTriangleSum(data);
 		case "Shortest Path in a Grid":
 			return ShortestPathInGrid(data);
+		case "Sanitize Parentheses in Expression":
+			return SanitizeParentheses(data);
+		case "HammingCodes: Integer to Encoded Binary":
+			return HammingEncode(data);
+		case "HammingCodes: Encoded Binary to Integer":
+			return HammingDecode(data);
+		case "Find Largest Prime Factor":
+			return LargestPrimeFactor(data);
 		default:
-			ns.print(type);
+			ns.print(`${DEFAULT_COLOR}${type} ${TAIL_COLORS[3]}${contract}`);
 
 			throw Error("not implemented");
 	}
