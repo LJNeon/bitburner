@@ -7,7 +7,7 @@ export default function RunScript(ns, script, target, threads, partial = false) 
 	const spread = script === "weaken.js";
 	const ram = new RAM(ns);
 	let servers = ram.chunkList
-		.map(({name, free, reserved}) => ({name, threads: Math.floor((free - reserved) / threadRAM)}))
+		.map(({server, free, reserved}) => ({name: server, threads: Math.floor((free - reserved) / threadRAM)}))
 		.filter(s => s.threads > 0);
 
 	if(ram.free - ram.reserved >= FOCUS_SMALL_THRESHOLD)
@@ -38,8 +38,11 @@ export default function RunScript(ns, script, target, threads, partial = false) 
 	for(const server of servers) {
 		const spawn = Math.min(server.threads, threads - spawned);
 
-		pids.push(ns.exec(script, server.name, spawn, target, Math.random().toString(16).slice(-8)));
+		pids.push(ns.exec(script, server.name, spawn, target, Math.random().toString(16).slice(2)));
 		spawned += spawn;
+
+		if(spawned >= threads)
+			break;
 	}
 
 	return pids;

@@ -55,14 +55,14 @@ async function Prepare(ns, target) {
 			const threads = GetWeakThreads(hackDifficulty - minDifficulty);
 
 			ns.print(`${DEFAULT_COLOR}[!] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
-			pids.push(...await RunScript(ns, "weaken.js", target, threads, true));
+			pids.push(...RunScript(ns, "weaken.js", target, threads, true));
 		}
 
 		if(moneyAvailable !== moneyMax) {
 			const threads = GetGrowThreadsL(ns, target, moneyMax - moneyAvailable);
 
 			ns.print(`${DEFAULT_COLOR}[!] Cash at ${ns.nFormat(moneyAvailable, "$0.00a")}/${ns.nFormat(moneyMax, "$0.00a")}`);
-			pids.push(...await RunScript(ns, "grow.js", target, threads, true));
+			pids.push(...RunScript(ns, "grow.js", target, threads, true));
 		}
 
 		if(pids.length === 0)
