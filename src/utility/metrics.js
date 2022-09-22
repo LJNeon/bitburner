@@ -1,7 +1,7 @@
-import {LEECH_PERCENTS} from "constants.js";
-import {ScanAll} from "utility.js";
-import {CalcPeriodDepth} from "batcher/stalefish.js";
-import {GetBatchRam} from "batcher/threads.js";
+import {LEECH_PERCENTS} from "utility/constants.js";
+import {ScanAll} from "utility/generic.js";
+import {CalcPeriodDepth} from "utility/stalefish.js";
+import {GetBatchRam} from "utility/threads.js";
 
 /** @param {import("../").NS} ns */
 export async function GetHackPercent(ns, target) {

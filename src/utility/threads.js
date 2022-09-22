@@ -1,12 +1,7 @@
-/*.
- * There are two versions of most exported functions. The L version
- * is the version that doesn't use Formulas.exe, because that's an L.
-.*/
-
 import {
 	HACK_RAM, WEAKEN_GROW_RAM, WEAKEN_GROW_EXTRA, IDS,
 	SEC_PER_THREAD
-} from "constants.js";
+} from "utility/constants.js";
 
 /** @param {import("../").NS} ns */
 export function GetWeakThreads(security) {

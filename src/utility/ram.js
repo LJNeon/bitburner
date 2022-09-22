@@ -1,5 +1,5 @@
-import {MIN_HOME_RAM} from "constants.js";
-import {ScanAll} from "utility.js";
+import {MIN_HOME_RAM} from "utility/constants.js";
+import {ScanAll} from "utility/generic.js";
 
 export default class RAM {
 	/** @param {import("../").NS} ns */

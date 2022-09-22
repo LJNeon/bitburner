@@ -193,10 +193,10 @@ class Batcher {
 
 			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], lateBy => {
 				const server = this.ns.getServer(this.server);
-				const notMinSec = server.minDifficulty !== server.hackDifficulty;
+				const unpreped = server.hackDifficulty !== server.minDifficulty || server.moneyAvailable !== server.moneyMax;
 				const spread = which === IDS.W1 || which === IDS.W2;
 
-				if((lateBy >= SAFETY_THRESHOLD || notMinSec) && this.CancelTask(id, which, notMinSec || lateBy))
+				if((lateBy >= SAFETY_THRESHOLD || unpreped) && this.CancelTask(id, which, unpreped || lateBy))
 					return;
 
 				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which], spread);
@@ -215,6 +215,12 @@ class Batcher {
 				if(batch.pids[i] != null && !batch.finished[i] && CheckPids(this.ns, batch.pids[i])) {
 					batch.finished[i] = true;
 					this.ns.print(`${color}[${this.EndOrder(i)}] ${this.GetName(i)} x${this.threads[i]} finished.`);
+
+					if(i === IDS.G || i === IDS.H) {
+						const money = this.ns.getServer(this.server).moneyAvailable;
+
+						this.ns.print(`${DEFAULT_COLOR}[${this.GetName(i)}] ${this.ns.nFormat(money, "$0.00a")}`);
+					}
 				}
 			}
 

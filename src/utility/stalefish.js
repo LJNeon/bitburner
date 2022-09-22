@@ -1,4 +1,4 @@
-import {SAFETY_DELAY, HACK_LEVEL_RANGE} from "constants.js";
+import {SAFETY_DELAY, HACK_LEVEL_RANGE} from "utility/constants.js";
 
 /** @param {import("../").NS} ns */
 export function CalcPeriodDepth(ns, target, sizeLimit) {

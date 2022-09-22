@@ -34,7 +34,7 @@ export const MONEY_PER_HACK = 0.5;
 // Time in milliseconds to wait between batcher tasks.
 export const SAFETY_DELAY = 150;
 // Time in milliseconds where a batch task is "too late" and the batch is cancelled.
-export const SAFETY_THRESHOLD = 50;
+export const SAFETY_THRESHOLD = 25;
 // Time in milliseconds after which the "simple" batcher should retry a batch.
 export const RETRY_AFTER = [60_000, "60s"];
 // Range in hacking skill levels that should be handled before the batcher needs to restart.

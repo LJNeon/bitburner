@@ -1,5 +1,5 @@
-import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "constants.js";
-import RAM from "batcher/ram.js";
+import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "utility/constants.js";
+import RAM from "utility/ram.js";
 
 /** @param {import("../").NS} ns */
 export default function RunScript(ns, script, target, threads, spread = false, partial = false) {
