@@ -43,10 +43,13 @@ export const HACK_LEVEL_RANGE = 20;
 export const FOCUS_SMALL_THRESHOLD = 10_000;
 // GBs of total RAM across all accessible servers where a chain batcher is considered viable.
 export const CHAIN_VIABLE_THRESHOLD = 1_000_000;
+// Viable percents of a server's total money to hack in a single pass.
 export const LEECH_PERCENTS = [
 	0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.15, 0.2, 0.25,
 	0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9, 1
 ];
+// Port number for the chain batcher and it's child processes to use.
+export const CHAIN_PORT = 1;
 // Default color to use when logging.
 export const DEFAULT_COLOR = "\u001b[38;5;250m";
 // List of colors to use when logging batches.

@@ -1,6 +1,6 @@
 import {
-	IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, TAIL_COLORS,
-	DEFAULT_COLOR
+	IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, CHAIN_PORT,
+	TAIL_COLORS, DEFAULT_COLOR
 } from "utility/constants.js";
 import {CheckPids} from "utility/generic.js";
 import {GetHackPercent} from "utility/metrics.js";
@@ -73,6 +73,7 @@ class Scheduler {
 class Batcher {
 	/** @param {import("../").NS} ns */
 	constructor(ns, metrics) {
+		this.createdAt = performance.now();
 		/** @type {import("../").NS} */
 		this.ns = ns;
 		this.server = metrics.target;
@@ -81,14 +82,20 @@ class Batcher {
 		this.depth = metrics.depth;
 		this.level = ns.getPlayer().skills.hacking;
 		this.levelMax = this.level + HACK_LEVEL_RANGE;
-		this.createdAt = performance.now();
-		this.ran = 0;
+		this.port = ns.getPortHandle(CHAIN_PORT);
+		this.port.clear();
 		this.scheduler = new Scheduler();
 		this.batches = new Map();
+		this.ids = new Map();
 		// 0 = preparing, 1 = running, 2 = stopping
 		this.stage = 0;
-		this.invalidated = false;
+		this.ran = 0;
+		this.lastID = 0;
 		this.AdjustForLevel();
+	}
+
+	GetID() {
+		return this.lastID = (this.lastID + 1) % Number.MAX_SAFE_INTEGER;
 	}
 
 	GetColor(id) {
@@ -168,16 +175,13 @@ class Batcher {
 	CancelTask(id, which, diff) {
 		const batch = this.batches.get(id);
 
-		if(which === IDS.W2 || which === IDS.G) {
-			this.scheduler.Delete(batch.pending[IDS.G]);
-			batch.finished[IDS.G] = true;
-		}
+		if(which === IDS.W2 || which === IDS.G)
+			this.scheduler.Delete(batch.scheduled[IDS.G]);
 
-		this.scheduler.Delete(batch.pending[IDS.H]);
-		batch.finished[IDS.H] = true;
+		this.scheduler.Delete(batch.scheduled[IDS.H]);
 
-		if(!batch.cancelled) {
-			batch.cancelled = true;
+		if(!batch.partial) {
+			batch.partial = true;
 			this.ns.print(`${DEFAULT_COLOR}[!] Batch ${id + 1} cancelled (${diff.toFixed(2)}).`);
 		}
 
@@ -185,48 +189,48 @@ class Batcher {
 	}
 
 	StartBatch(now) {
-		const id = this.ran;
-		const batch = {pending: [], pids: [], finished: Array(4).fill(false)};
+		const batchID = this.ran;
+		const batch = {scheduled: [], running: {}, partial: false};
 
 		for(let i = IDS.W1; i <= IDS.H; i++) {
 			const which = i;
 
-			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], lateBy => {
+			batch.scheduled[which] = this.scheduler.Schedule(which, now, this.delays[which], lateBy => {
 				const server = this.ns.getServer(this.server);
 				const unpreped = server.hackDifficulty !== server.minDifficulty || server.moneyAvailable !== server.moneyMax;
 				const spread = which === IDS.W1 || which === IDS.W2;
 
-				if((lateBy >= SAFETY_THRESHOLD || unpreped) && this.CancelTask(id, which, unpreped || lateBy))
+				if((lateBy >= SAFETY_THRESHOLD || unpreped) && this.CancelTask(batchID, which, unpreped || lateBy))
 					return;
 
-				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which], spread);
+				const id = this.GetID();
+
+				this.ids.set(id, batchID);
+				batch.running[id] = which;
+				RunScript(this.ns, scripts[which], this.server, this.threads[which], spread, false, id, CHAIN_PORT);
 			});
 		}
 
-		this.batches.set(id, batch);
+		this.batches.set(batchID, batch);
 		++this.ran;
 	}
 
-	HandleCompletedBatches() {
+	ReadPort() {
+		while(!this.port.empty()) {
+			const id = this.port.read();
+			const batchID = this.ids.get(id);
+			const batch = this.batches.get(batchID);
+			const which = batch.running[id];
+
+			this.ns.print(`${this.GetColor(batchID)}[${this.EndOrder(which)}] ${this.GetName(which)} finished.`);
+			delete batch.running[id];
+			this.ids.delete(id);
+		}
+
 		for(const [id, batch] of this.batches.entries()) {
-			const color = this.GetColor(id);
-
-			for(let i = IDS.W1; i <= IDS.H; i++) {
-				if(batch.pids[i] != null && !batch.finished[i] && CheckPids(this.ns, batch.pids[i])) {
-					batch.finished[i] = true;
-					this.ns.print(`${color}[${this.EndOrder(i)}] ${this.GetName(i)} x${this.threads[i]} finished.`);
-
-					if(i === IDS.G || i === IDS.H) {
-						const money = this.ns.getServer(this.server).moneyAvailable;
-
-						this.ns.print(`${DEFAULT_COLOR}[${this.GetName(i)}] ${this.ns.nFormat(money, "$0.00a")}`);
-					}
-				}
-			}
-
-			if(batch.finished.every(f => f)) {
+			if(batch.scheduled.every(s => !this.scheduler.Has(s)) && Object.keys(batch.running).length === 0) {
 				this.batches.delete(id);
-				this.ns.print(`${color}[-] Batch ${id + 1} ${batch.cancelled ? "partially " : ""}completed.`);
+				this.ns.print(`${this.GetColor(id)}[-] Batch #${id + 1} ${batch.partial ? "partially " : ""}completed.`);
 			}
 		}
 	}
@@ -248,7 +252,7 @@ class Batcher {
 			this.StartBatch(nextBatchAt);
 
 		this.scheduler.Run(now);
-		this.HandleCompletedBatches();
+		this.ReadPort();
 	}
 
 	Update() {
@@ -262,7 +266,7 @@ class Batcher {
 
 				break;
 			case 2:
-				this.HandleCompletedBatches();
+				this.ReadPort();
 
 				break;
 		}

@@ -2,7 +2,7 @@ import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "utility/constant
 import RAM from "utility/ram.js";
 
 /** @param {import("../").NS} ns */
-export default function RunScript(ns, script, target, threads, spread = false, partial = false) {
+export default function RunScript(ns, script, target, threads, spread = false, partial = false, ...args) {
 	const threadRAM = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
 	const ram = new RAM(ns);
 	const focusSmall = ram.free - ram.reserved < FOCUS_SMALL_THRESHOLD;
@@ -37,7 +37,7 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 
 	for(const server of servers) {
 		const spawn = Math.min(server.threads, threads - spawned);
-		const pid = ns.exec(script, server.name, spawn, target, Math.random().toString(16).slice(2));
+		const pid = ns.exec(script, server.name, spawn, target, ...args);
 
 		if(pid === 0) {
 			pids.forEach(id => ns.kill(id));

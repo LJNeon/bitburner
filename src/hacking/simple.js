@@ -56,9 +56,7 @@ async function Prepare(ns, target) {
 
 			ns.print(`${DEFAULT_COLOR}[!] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
 			pids.push(...RunScript(ns, "weaken.js", target, threads, true, true));
-		}
-
-		if(hackDifficulty < 100 && moneyAvailable !== moneyMax) {
+		}else if(moneyAvailable !== moneyMax) {
 			const threads = GetGrowThreads(ns, server, ns.getPlayer());
 
 			ns.print(`${DEFAULT_COLOR}[!] Cash at ${ns.nFormat(moneyAvailable, "$0.00a")}/${ns.nFormat(moneyMax, "$0.00a")}`);
