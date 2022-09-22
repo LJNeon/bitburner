@@ -761,8 +761,7 @@ function AnswerContract(ns, type, data) {
 }
 
 class Rewards {
-	constructor(ns) {
-		this.ns = ns;
+	constructor() {
 		this.money = 0;
 		this.companies = new Map();
 		this.all = 0;
@@ -789,19 +788,22 @@ class Rewards {
 		}
 	}
 
-	list() {
-		let result = `  - ${this.ns.nFormat(this.money, "$0.00a")}`;
+	list(ns) {
+		const results = [];
+
+		if(this.money > 0)
+			results.push(`${ns.nFormat(this.money, "$0.00a")}`);
 
 		for(const [name, rep] of this.companies.entries())
-			result += `\n  - ${rep} reputation for ${name}`;
+			results.push(`${rep} reputation for ${name}`);
 
 		if(this.all > 0)
-			result += `\n  - ${this.all} reputation for all factions.`;
+			results.push(`${this.all} reputation for all factions.`);
 
 		for(const [name, rep] of this.factions.entries())
-			result += `\n  - ${rep} reputation for ${name}`;
+			results.push(`${rep} reputation for ${name}`);
 
-		return result;
+		return results.length === 1 ? ` ${results[0]}` : `\n  - ${results.join("\n  - ")}`;
 	}
 }
 
@@ -844,5 +846,5 @@ export async function main(ns) {
 	if(total === 0)
 		ns.tprint(`${DEFAULT_COLOR}Found no CCTs to complete.`);
 	else
-		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:\n${rewards.list()}.`);
+		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list()}.`);
 }
