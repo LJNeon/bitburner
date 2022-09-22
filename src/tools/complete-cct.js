@@ -779,6 +779,25 @@ function SpiralMatrix(data, progress = []) {
 	return SpiralMatrix(data, progress);
 }
 
+function SubarrayMaxSum(data) {
+	let highest = data[0];
+
+	for(let i = 0; i < data.length; i++) {
+
+		for(let j = i; j < data.length; j++) {
+			let subset = 0;
+
+			for(let k = i; k <= j; k++)
+				subset += data[k];
+
+			if(highest < subset)
+				highest = subset;
+		}
+	}
+
+	return highest;
+}
+
 /** @param {import("../").NS} ns */
 function FindContracts(ns) {
 	return ScanAll(ns)
@@ -836,6 +855,8 @@ function AnswerContract(type, data) {
 			return ColoringOfGraph(data);
 		case "Spiralize Matrix":
 			return SpiralMatrix(data);
+		case "Subarray with Maximum Sum":
+			return SubarrayMaxSum(data);
 		default:
 			throw Error(`MISSING TYPE! ${type}`);
 	}
