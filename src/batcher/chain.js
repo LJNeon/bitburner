@@ -1,13 +1,12 @@
 import {
-	MONEY_PER_HACK, IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE,
-	CHAIN_VIABLE_THRESHOLD, DEFAULT_COLOR, TAIL_COLORS
+	IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, TAIL_COLORS,
+	DEFAULT_COLOR
 } from "constants.js";
 import {CheckPids} from "utility.js";
-import RAM from "batcher/ram.js";
+import {GetHackPercent} from "batcher/metrics.js";
 import RunScript from "batcher/run-script.js";
-import {CalcPeriodDepth, CalcDelayS} from "batcher/stalefish.js";
+import {CalcDelays} from "batcher/stalefish.js";
 import {GetWeakThreads, GetGrowThreads, GetThreads} from "batcher/threads.js";
-import FindBestServer from "tools/best-target.js";
 
 const scripts = ["weaken.js", "weaken.js", "grow.js", "hack.js"];
 
@@ -60,7 +59,7 @@ class Scheduler {
 		for(const [id, task] of this.tasks.entries()) {
 			if(task.createdAt + task.delay <= now) {
 				this.tasks.delete(id);
-				task.run(now - task.createdAt + task.delay);
+				task.run(now - task.createdAt - task.delay);
 			}
 		}
 	}
@@ -73,12 +72,14 @@ class Scheduler {
 
 class Batcher {
 	/** @param {import("../").NS} ns */
-	constructor(ns, hackPct) {
+	constructor(ns, metrics) {
 		/** @type {import("../").NS} */
 		this.ns = ns;
-		this.server = FindBestServer(ns, 1);
-		this.hackPct = hackPct;
-		this.level = ns.getHackingLevel();
+		this.server = metrics.target;
+		this.hackPct = metrics.pct;
+		this.period = metrics.period;
+		this.depth = metrics.depth;
+		this.level = ns.getPlayer().skills.hacking;
 		this.levelMax = this.level + HACK_LEVEL_RANGE;
 		this.createdAt = performance.now();
 		this.ran = 0;
@@ -87,13 +88,7 @@ class Batcher {
 		// 0 = preparing, 1 = running, 2 = stopping
 		this.stage = 0;
 		this.invalidated = false;
-
-		const {period, depth} = CalcPeriodDepth(ns, this.server, hackPct);
-
-		this.period = period;
-		this.depth = depth;
 		this.AdjustForLevel();
-		ns.print(`${DEFAULT_COLOR}[-] Batching on "${this.server}" x${depth}.`);
 	}
 
 	GetColor(id) {
@@ -127,7 +122,7 @@ class Batcher {
 
 	AdjustForLevel() {
 		this.threads = GetThreads(this.ns, this.server, this.hackPct);
-		this.delays = CalcDelayS(this.ns, this.server, this.period, this.depth);
+		this.delays = CalcDelays(this.ns, this.server, this.period, this.depth);
 		this.scheduler.AdjustDelays(this.delays);
 	}
 
@@ -159,7 +154,7 @@ class Batcher {
 
 		if(server.hackDifficulty === server.minDifficulty && server.moneyAvailable === server.moneyMax) {
 			this.stage = 1;
-			this.ns.print(`${DEFAULT_COLOR}[-] Preparations completed.`);
+			this.ns.print(`${DEFAULT_COLOR}[-] Running ${this.depth} batches in ${this.ns.tFormat(this.period)}.`);
 		}else if(this.preparing == null || CheckPids(this.ns, this.preparing)) {
 			this.StartPreparing();
 		}
@@ -231,7 +226,7 @@ class Batcher {
 
 	Run() {
 		const now = performance.now();
-		const level = this.ns.getHackingLevel();
+		const level = this.ns.getPlayer().skills.hacking;
 		const nextBatchAt = this.createdAt + (this.period * this.ran);
 
 		if(level !== this.level) {
@@ -242,7 +237,7 @@ class Batcher {
 			this.level = level;
 		}
 
-		if(this.ran === 0 && nextBatchAt <= now)
+		if(nextBatchAt <= now)
 			this.StartBatch(nextBatchAt);
 
 		this.scheduler.Run(now);
@@ -274,32 +269,32 @@ class Batcher {
 /** @param {import("../").NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
-	ns.tail();
 
-	const ram = new RAM(ns);
-	let last = performance.now();
+	const target = ns.args[0];
 
-	if(ram.free < CHAIN_VIABLE_THRESHOLD)
-		return ns.tprint(`Not at ${ns.nFormat(CHAIN_VIABLE_THRESHOLD * 1e9, "0.00b")} of available RAM yet!`);
-	else if(!ns.fileExists("Formulas.exe"))
-		return ns.tprint("Missing Formulas.exe, which is required!");
+	try {
+		ns.getServer(target);
+	}catch{
+		return ns.tprint(`${DEFAULT_COLOR}Server "${target}" doesn't exist.`);
+	}
 
-	const hackPct = ns.args[0] ?? MONEY_PER_HACK;
-	let batcher = new Batcher(ns, hackPct);
+	let metrics = await GetHackPercent(ns, target);
+
+	if(metrics.pct === 0)
+		return ns.tprint(`${DEFAULT_COLOR}Not enough available RAM to batch on "${target}".`);
+
+	let batcher = new Batcher(ns, metrics);
+
+	ns.print(`${DEFAULT_COLOR}[-] Starting, will hack at ${metrics.pct * 100}%...`);
 
 	while(true) {
-		const now = performance.now();
-		const delta = now - last;
-
-		last = now;
-
 		if(batcher.Stopped()) {
-			ns.print(`${DEFAULT_COLOR}[-] Batcher is restarting.`);
-			batcher = new Batcher(ns, hackPct);
+			metrics = await GetHackPercent(ns, target);
+			ns.print(`${DEFAULT_COLOR}[-] Restarting, will hack at ${metrics.pct * 100}%...`);
+			batcher = new Batcher(ns, metrics);
 		}
 
 		batcher.Update();
-		ns.print(delta);
 		await ns.sleep(5);
 	}
 }

@@ -1,6 +1,44 @@
 import {DEFAULT_COLOR} from "constants.js";
 import {ScanAll} from "utility.js";
 
+function RLECompress(data) {
+	const chars = Array.from(data);
+	let answer = "";
+	let current = undefined;
+	let count = 0;
+
+	while(chars.length > 0) {
+		const char = chars.shift();
+
+		switch(current) {
+			case undefined:
+				current = char;
+				count = 1;
+
+				break;
+			case char:
+				if(count === 9) {
+					answer = `${answer}${count}${current}`;
+					count = 0;
+				}
+
+				count++;
+
+				break;
+			default:
+				answer = `${answer}${count}${current}`;
+				current = char;
+				count = 1;
+
+				break;
+		}
+	}
+
+	answer = `${answer}${count}${current}`;
+
+	return answer;
+}
+
 function SetLZ(state, i, j, str) {
 	const current = state[i][j];
 
@@ -701,6 +739,46 @@ function ColoringOfGraph(data) {
 	return coloring;
 }
 
+function SpiralColumn(data, index) {
+	const res = [];
+
+	for(let i = 0; i < data.length; i++) {
+		const elm = data[i].splice(index, 1)[0];
+
+		if(elm != null)
+			res.push(elm);
+	}
+
+	return res;
+}
+
+function SpiralMatrix(data, progress = []) {
+	if(data.length === 0 || data[0].length === 0)
+		return progress;
+
+	progress = progress.concat(data.shift());
+
+	if(data.length === 0 || data[0].length === 0)
+		return progress;
+
+	progress = progress.concat(SpiralColumn(data, data[0].length - 1));
+
+	if(data.length === 0 || data[0].length === 0)
+		return progress;
+
+	progress = progress.concat(data.pop().reverse());
+
+	if(data.length === 0 || data[0].length === 0)
+		return progress;
+
+	progress = progress.concat(SpiralColumn(data, 0).reverse());
+
+	if(data.length === 0 || data[0].length === 0)
+		return progress;
+
+	return SpiralMatrix(data, progress);
+}
+
 /** @param {import("../").NS} ns */
 function FindContracts(ns) {
 	return ScanAll(ns)
@@ -708,9 +786,10 @@ function FindContracts(ns) {
 		.filter(server => server.contracts.length !== 0);
 }
 
-/** @param {import("../").NS} ns */
-function AnswerContract(ns, type, data) {
+function AnswerContract(type, data) {
 	switch(type) {
+		case "Compression I: RLE Compression":
+			return RLECompress(data);
 		case "Compression III: LZ Compression":
 			return LZCompress(data);
 		case "Encryption II: Vigenère Cipher":
@@ -755,6 +834,8 @@ function AnswerContract(ns, type, data) {
 			return MergeIntervals(data);
 		case "Proper 2-Coloring of a Graph":
 			return ColoringOfGraph(data);
+		case "Spiralize Matrix":
+			return SpiralMatrix(data);
 		default:
 			throw Error(`MISSING TYPE! ${type}`);
 	}
@@ -772,17 +853,14 @@ class Rewards {
 		const start = reward.indexOf(" ") + 1;
 
 		if(reward.includes("faction reputation")) {
-			const faction = reward.slice(reward.lastIndexOf(" ") + 1);
+			const faction = reward.slice(reward.indexOf("for") + 4);
 			const amount = Number(reward.slice(start, reward.indexOf(" ", start)));
 
 			this.factions.set(faction, (this.factions.get(faction) ?? 0) + amount);
-		}else if(reward.includes("reputation for")) {
+		}else if(reward.includes("reputation for each")) {
 			this.all += Number(reward.slice(start, reward.indexOf(" ", start)));
 		}else if(reward.includes("$")) {
-			if(reward.endsWith("m"))
-				this.money += Number(reward.slice(start + 1, -1)) * 1e6;
-			else if(reward.endsWith("b"))
-				this.money += Number(reward.slice(start + 1, -1)) * 1e9;
+			this.money += Number(reward.slice(start + 1, -1)) * 1e6;
 		}else{
 			this.ns.tprint("UNLISTED REWARD! ", reward);
 		}
@@ -795,13 +873,13 @@ class Rewards {
 			results.push(`${ns.nFormat(this.money, "$0.00a")}`);
 
 		for(const [name, rep] of this.companies.entries())
-			results.push(`${rep} reputation for ${name}`);
+			results.push(`${ns.nFormat(rep, "0.00a")} reputation for ${name}`);
 
 		if(this.all > 0)
-			results.push(`${this.all} reputation for all factions.`);
+			results.push(`${ns.nFormat(this.all, "0.00a")} reputation for all factions.`);
 
 		for(const [name, rep] of this.factions.entries())
-			results.push(`${rep} reputation for ${name}`);
+			results.push(`${ns.nFormat(rep, "0.00a")} reputation for ${name}`);
 
 		return results.length === 1 ? ` ${results[0]}` : `\n  - ${results.join("\n  - ")}`;
 	}
@@ -823,7 +901,7 @@ export async function main(ns) {
 			let answer;
 
 			try {
-				answer = AnswerContract(ns, type, data);
+				answer = AnswerContract(type, data);
 			}catch(err) {
 				ns.tprint(`${DEFAULT_COLOR}${err.message}`);
 
@@ -846,5 +924,5 @@ export async function main(ns) {
 	if(total === 0)
 		ns.tprint(`${DEFAULT_COLOR}Found no CCTs to complete.`);
 	else
-		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list()}.`);
+		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list(ns)}.`);
 }

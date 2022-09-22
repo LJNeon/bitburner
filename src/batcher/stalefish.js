@@ -1,9 +1,7 @@
 import {SAFETY_DELAY, HACK_LEVEL_RANGE} from "constants.js";
-import {GetBatchRam} from "utility.js";
-import RAM from "batcher/ram.js";
 
 /** @param {import("../").NS} ns */
-export function CalcPeriodDepth(ns, target, hackPct) {
+export function CalcPeriodDepth(ns, target, sizeLimit) {
 	const server = ns.getServer(target);
 	const player = ns.getPlayer();
 
@@ -18,22 +16,11 @@ export function CalcPeriodDepth(ns, target, hackPct) {
 	const minWeakT = ns.formulas.hacking.weakenTime(server, player);
 	const minGrowT = ns.formulas.hacking.growTime(server, player);
 	const minHackT = ns.formulas.hacking.hackTime(server, player);
-	const ram = new RAM(ns, true);
-	const batchRam = GetBatchRam(ns, target, hackPct);
-	const maxDepthByRam = Math.floor(ram.total / batchRam);
-
-	if(maxDepthByRam === 0)
-		throw Error("Max RAM depth is 0!");
-
-	const maxDepthByDesync = Math.floor(minWeakT / (SAFETY_DELAY * 4) / 2);
+	const safeLimit = Math.floor(minWeakT / (SAFETY_DELAY * 4) / 2);
 	let period;
 	let depth;
 	// Let the witchcraft begin!
-	const kW_max = Math.min(
-		Math.floor(1 + ((minWeakT - (4 * SAFETY_DELAY)) / (8 * SAFETY_DELAY))),
-		maxDepthByRam,
-		maxDepthByDesync
-	);
+	const kW_max = Math.min(Math.floor(1 + ((minWeakT - (4 * SAFETY_DELAY)) / (8 * SAFETY_DELAY))), sizeLimit, safeLimit);
 
 	schedule: for(let kW = kW_max; kW >= 1; --kW) {
 		const t_min_W = (maxWeakT + (4 * SAFETY_DELAY)) / kW;
@@ -67,24 +54,6 @@ export function CalcPeriodDepth(ns, target, hackPct) {
 }
 /** @param {import("../").NS} ns */
 export function CalcDelays(ns, target, period, depth) {
-	const server = ns.getServer(target);
-	const player = ns.getPlayer();
-
-	server.hackDifficulty = server.minDifficulty;
-
-	const weakT = ns.formulas.hacking.weakenTime(server, player);
-	const growT = ns.formulas.hacking.growTime(server, player);
-	const hackT = ns.formulas.hacking.hackTime(server, player);
-
-	return {
-		H: Math.round((depth * period) - (SAFETY_DELAY * 4) - hackT),
-		W1: Math.round((depth * period) - (SAFETY_DELAY * 3) - weakT),
-		G: Math.round((depth * period) - (SAFETY_DELAY * 2) - growT),
-		W2: Math.round((depth * period) - SAFETY_DELAY - weakT)
-	};
-}
-/** @param {import("../").NS} ns */
-export function CalcDelayS(ns, target, period, depth) {
 	const server = ns.getServer(target);
 	const player = ns.getPlayer();
 
