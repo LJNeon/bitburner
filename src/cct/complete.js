@@ -1,4 +1,4 @@
-import {TAIL_COLORS, DEFAULT_COLOR} from "constants.js";
+import {DEFAULT_COLOR} from "constants.js";
 import {ScanAll} from "utility.js";
 
 function VigenereCipher(data) {
@@ -17,7 +17,7 @@ function VigenereCipher(data) {
 
 function JumpingGameI(data) {
 	if(data[0] === 0)
-		return 0;
+		return "0";
 
 	const jumps = [1];
 
@@ -484,6 +484,114 @@ function LargestPrimeFactor(data) {
 	return "";
 }
 
+function StockTrader(data) {
+	const [maxTrades, stockPrices] = data;
+	const highestProfit = [];
+
+	for(let i = 0; i < maxTrades; i++)
+		highestProfit.push(Array(stockPrices.length + 1).fill(0));
+
+	for(let i = 0; i < maxTrades; i++) {
+		for(let j = 0; j < stockPrices.length; j++) {
+			for(let k = j; k < stockPrices.length; k++) {
+				if(i > 0 && j > 0 && k > 0) {
+					highestProfit[i][k] = Math.max(
+						highestProfit[i][k],
+						highestProfit[i - 1][k],
+						highestProfit[i][k - 1],
+						highestProfit[i - 1][j - 1] + stockPrices[k] - stockPrices[j]
+					);
+				}else if(i > 0 && j > 0) {
+					highestProfit[i][k] = Math.max(
+						highestProfit[i][k],
+						highestProfit[i - 1][k],
+						highestProfit[i - 1][j - 1] + stockPrices[k] - stockPrices[j]
+					);
+				}else if(i > 0 && k > 0) {
+					highestProfit[i][k] = Math.max(
+						highestProfit[i][k],
+						highestProfit[i - 1][k],
+						highestProfit[i][k - 1],
+						stockPrices[k] - stockPrices[j]
+					);
+				}else if(j > 0 && k > 0) {
+					highestProfit[i][k] = Math.max(highestProfit[i][k], highestProfit[i][k - 1], stockPrices[k] - stockPrices[j]);
+				}else{
+					highestProfit[i][k] = Math.max(highestProfit[i][k], stockPrices[k] - stockPrices[j]);
+				}
+
+			}
+		}
+	}
+
+	return highestProfit[maxTrades - 1][stockPrices.length - 1];
+}
+
+function MergeIntervals(data) {
+	const intervals = data;
+
+	intervals.sort(([minA], [minB]) => minA - minB);
+
+	for(let i = 0; i < intervals.length; i++) {
+		for(let j = i + 1; j < intervals.length; j++) {
+			const [min, max] = intervals[i];
+			const [laterMin, laterMax] = intervals[j];
+
+			if(laterMin <= max) {
+				const newMax = laterMax > max ? laterMax : max;
+				const newInterval = [min, newMax];
+
+				intervals[i] = newInterval;
+				intervals.splice(j, 1);
+				j = i;
+			}
+		}
+	}
+
+	return intervals;
+}
+
+function Neighborhood(data, vertex) {
+	const adjLeft = data[1].filter(([a, _]) => a === vertex).map(([_, b]) => b);
+	const adjRight = data[1].filter(([_, b]) => b === vertex).map(([a, _]) => a);
+
+	return adjLeft.concat(adjRight);
+}
+
+function ColoringOfGraph(data) {
+	const coloring = Array(data[0]).fill(undefined);
+
+	while(coloring.some(val => val == null)) {
+		const initialVertex = coloring.findIndex((val) => val == null);
+
+		coloring[initialVertex] = 0;
+
+		const frontier = [initialVertex];
+
+		while(frontier.length > 0) {
+			const v = frontier.pop() || 0;
+			const neighbors = Neighborhood(data, v);
+
+			for(const id in neighbors) {
+				const u = neighbors[id];
+
+				if(coloring[u] === undefined) {
+					if(coloring[v] === 0)
+						coloring[u] = 1;
+					else
+						coloring[u] = 0;
+
+					frontier.push(u);
+				}else if(coloring[u] === coloring[v]) {
+					return "[]";
+				}
+			}
+		}
+	}
+
+	return coloring;
+}
+
 /** @param {import("../").NS} ns */
 function FindContracts(ns) {
 	return ScanAll(ns)
@@ -492,10 +600,7 @@ function FindContracts(ns) {
 }
 
 /** @param {import("../").NS} ns */
-async function AnswerContract(ns, server, contract) {
-	const type = ns.codingcontract.getContractType(contract, server);
-	const data = ns.codingcontract.getData(contract, server);
-
+function AnswerContract(ns, type, data) {
 	switch(type) {
 		case "Encryption II: Vigenère Cipher":
 			return VigenereCipher(data);
@@ -527,41 +632,97 @@ async function AnswerContract(ns, server, contract) {
 			return HammingDecode(data);
 		case "Find Largest Prime Factor":
 			return LargestPrimeFactor(data);
+		case "Algorithmic Stock Trader I":
+			return StockTrader([1, data]);
+		case "Algorithmic Stock Trader II":
+			return StockTrader([Math.ceil(data.length / 2), data]);
+		case "Algorithmic Stock Trader III":
+			return StockTrader([2, data]);
+		case "Algorithmic Stock Trader IV":
+			return StockTrader(data);
+		case "Merge Overlapping Intervals":
+			return MergeIntervals(data);
+		case "Proper 2-Coloring of a Graph":
+			return ColoringOfGraph(data);
 		default:
-			ns.print(`${DEFAULT_COLOR}${type} ${TAIL_COLORS[3]}${contract}`);
+			ns.tprint("MISSING TYPE! ", type);
+	}
+}
 
-			throw Error("not implemented");
+class Rewards {
+	constructor(ns) {
+		this.ns = ns;
+		this.money = 0;
+		this.companies = new Map();
+		this.all = 0;
+		this.factions = new Map();
+	}
+
+	add(reward) {
+		const start = reward.indexOf(" ") + 1;
+
+		if(reward.includes("faction reputation")) {
+			const faction = reward.slice(reward.lastIndexOf(" ") + 1);
+			const amount = Number(reward.slice(start, reward.indexOf(" ", start)));
+
+			this.factions.set(faction, (this.factions.get(faction) ?? 0) + amount);
+		}else if(reward.includes("reputation for")) {
+			this.all += Number(reward.slice(start, reward.indexOf(" ", start)));
+		}else if(reward.includes("$")) {
+			if(reward.endsWith("m"))
+				this.money += Number(reward.slice(start + 1, -1)) * 1e6;
+			else if(reward.endsWith("b"))
+				this.money += Number(reward.slice(start + 1, -1)) * 1e9;
+		}else{
+			this.ns.tprint("UNLISTED REWARD! ", reward);
+		}
+	}
+
+	list() {
+		let result = `  - ${this.ns.nFormat(this.money, "$0.00a")}`;
+
+		for(const [name, rep] of this.companies.entries())
+			result += `\n  - ${rep} reputation for ${name}`;
+
+		if(this.all > 0)
+			result += `\n  - ${this.all} reputation for all factions.`;
+
+		for(const [name, rep] of this.factions.entries())
+			result += `\n  - ${rep} reputation for ${name}`;
+
+		return result;
 	}
 }
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {
-	ns.disableLog("disableLog");
-	ns.disableLog("scan");
-	ns.disableLog("sleep");
+	ns.disableLog("ALL");
 
-	while(true) {
-		const now = performance.now();
-		const servers = FindContracts(ns);
-		let success = 0;
-		let total = 0;
+	const servers = FindContracts(ns);
+	const rewards = new Rewards();
+	let success = 0;
+	let total = 0;
 
-		for(const server of servers) {
-			for(const contract of server.contracts) {
-				try {
-					const answer = await AnswerContract(ns, server.name, contract);
+	for(const {name, contracts} of servers) {
+		for(const contract of contracts) {
+			const type = ns.codingcontract.getContractType(contract, name);
+			const data = ns.codingcontract.getData(contract, name);
+			const answer = AnswerContract(ns, type, data);
+			const reward = ns.codingcontract.attempt(answer, contract, name, {returnReward: true});
 
-					success += Number(ns.codingcontract.attempt(answer, contract, server.name));
-					++total;
-				}catch{}
+			if(reward === "") {
+				ns.tprint(`FAILED CONTRACT! Type: ${type} Data: ${JSON.stringify(data)}`);
+			}else{
+				++success;
+				rewards.add(reward);
 			}
+
+			++total;
 		}
-
-		if(total === 0)
-			ns.print(`${DEFAULT_COLOR}Found no CCTs to complete.`);
-		else
-			ns.print(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs in ${ns.tFormat(performance.now() - now)}.`);
-
-		await ns.sleep(6e5);
 	}
+
+	if(total === 0)
+		ns.tprint(`${DEFAULT_COLOR}Found no CCTs to complete.`);
+	else
+		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:\n${rewards.list()}.`);
 }

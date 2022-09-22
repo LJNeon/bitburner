@@ -52,6 +52,7 @@ rules: {
   no-prototype-builtins: "off",
   no-shadow: ["error", {builtinGlobals: true}],
   no-trailing-spaces: "error",
+  no-unused-vars: ["error", {argsIgnorePattern: "^_"}],
   no-var: "error",
   object-curly-newline: ["error", {
     ObjectExpression: {multiline: true, minProperties: 4},

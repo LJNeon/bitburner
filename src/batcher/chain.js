@@ -141,14 +141,14 @@ class Batcher {
 			const minSec = server.minDifficulty.toFixed(2);
 
 			this.ns.print(`${DEFAULT_COLOR}[!] ${sec}/${minSec} security.`);
-			pids.push(...RunScript(this.ns, "weaken.js", this.server, threads, true));
+			pids.push(...RunScript(this.ns, "weaken.js", this.server, threads, true, true));
 		}else if(server.moneyAvailable < server.moneyMax) {
 			const threads = GetGrowThreads(this.ns, this.server, null, false);
 			const money = this.ns.nFormat(server.moneyAvailable, "$0[.0]a");
 			const moneyMax = this.ns.nFormat(server.moneyMax, "$0[.0]a");
 
 			this.ns.print(`${DEFAULT_COLOR}[!] ${money}/${moneyMax} money.`);
-			pids.push(...RunScript(this.ns, "grow.js", this.server, threads, true));
+			pids.push(...RunScript(this.ns, "grow.js", this.server, threads, false, true));
 		}
 
 		this.preparing = pids;

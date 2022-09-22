@@ -125,12 +125,10 @@ export async function main(ns) {
 	if(hackPct <= 0 || hackPct > 1)
 		return ns.tprint("The hack percent must be > 0 and <= 1.");
 
-	await Prepare(ns, target);
-
 	const enough = EnoughRAM(ns, target, hackPct);
 
 	if(enough !== "")
-		return ns.tprint(`You need ${enough} to hack at ${hackPct * 100}%.`);
+		return ns.tprint(`You need ${enough} to hack "${target}" at ${hackPct * 100}%.`);
 
 	while(true) {
 		await Prepare(ns, target);
