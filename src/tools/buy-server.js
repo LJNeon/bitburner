@@ -1,5 +1,5 @@
-import {PERSONAL_SERVER_SHARE} from "constants.js";
-import {GenID, ScanAll} from "utility.js";
+import {PERSONAL_SERVER_SHARE} from "utility/constants.js";
+import {GenID, ScanAll} from "utility/generic.js";
 
 const MONEY_LIMIT = 0.4;
 const MAX_RAM = 2 ** 20;

@@ -2,11 +2,11 @@ import {
 	WEAKEN_GROW_RAM, HACK_RAM, IDS, TIME_RATIOS,
 	MONEY_PER_HACK, SAFETY_DELAY, RETRY_AFTER, TAIL_COLORS,
 	DEFAULT_COLOR
-} from "constants.js";
-import {SleepPids} from "utility.js";
-import RAM from "batcher/ram.js";
-import RunScript from "batcher/run-script.js";
-import {GetWeakThreads, GetGrowThreads, GetThreads} from "batcher/threads.js";
+} from "utility/constants.js";
+import {SleepPids} from "utility/generic.js";
+import RAM from "utility/ram.js";
+import RunScript from "utility/run-script.js";
+import {GetWeakThreads, GetGrowThreads, GetThreads} from "utility/threads.js";
 
 /** @param {import("../").NS} ns */
 function EnoughRAM(ns, target, hackPct) {

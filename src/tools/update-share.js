@@ -1,4 +1,4 @@
-import {PERSONAL_SERVER_SHARE} from "constants.js";
+import {PERSONAL_SERVER_SHARE} from "utility/constants.js";
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {

@@ -1,7 +1,7 @@
-import {TAIL_COLORS, DEFAULT_COLOR} from "constants.js";
-import {SleepPids} from "utility.js";
-import RunScript from "batcher/run-script.js";
-import {GetWeakThreads, GetGrowThreads} from "batcher/threads.js";
+import {TAIL_COLORS, DEFAULT_COLOR} from "utility/constants.js";
+import {SleepPids} from "utility/generic.js";
+import RunScript from "utility/run-script.js";
+import {GetWeakThreads, GetGrowThreads} from "utility/threads.js";
 
 /** @param {import("../").NS} ns */
 async function Prepare(ns, target) {

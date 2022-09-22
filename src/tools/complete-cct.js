@@ -1,5 +1,5 @@
-import {DEFAULT_COLOR} from "constants.js";
-import {ScanAll} from "utility.js";
+import {DEFAULT_COLOR} from "utility/constants.js";
+import {ScanAll} from "utility/generic.js";
 
 function RLECompress(data) {
 	const chars = Array.from(data);

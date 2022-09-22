@@ -1,12 +1,12 @@
 import {
 	IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, TAIL_COLORS,
 	DEFAULT_COLOR
-} from "constants.js";
-import {CheckPids} from "utility.js";
-import {GetHackPercent} from "batcher/metrics.js";
-import RunScript from "batcher/run-script.js";
-import {CalcDelays} from "batcher/stalefish.js";
-import {GetWeakThreads, GetGrowThreads, GetThreads} from "batcher/threads.js";
+} from "utility/constants.js";
+import {CheckPids} from "utility/generic.js";
+import {GetHackPercent} from "utility/metrics.js";
+import RunScript from "utility/run-script.js";
+import {CalcDelays} from "utility/stalefish.js";
+import {GetWeakThreads, GetGrowThreads, GetThreads} from "utility/threads.js";
 
 const scripts = ["weaken.js", "weaken.js", "grow.js", "hack.js"];
 

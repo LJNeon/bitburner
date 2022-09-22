@@ -1,5 +1,5 @@
-import {DEFAULT_COLOR} from "constants.js";
-import {ScanAll} from "utility.js";
+import {DEFAULT_COLOR} from "utility/constants.js";
+import {ScanAll} from "utility/generics.js";
 
 const portOpeners = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"];
 
