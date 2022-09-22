@@ -119,16 +119,16 @@ export async function main(ns) {
 	try {
 		ns.getServer(target);
 	}catch{
-		return ns.tprint(`Server "${target}" doesn't exist.`);
+		return ns.tprint(`${DEFAULT_COLOR}Server "${target}" doesn't exist.`);
 	}
 
 	if(hackPct <= 0 || hackPct > 1)
-		return ns.tprint("The hack percent must be > 0 and <= 1.");
+		return ns.tprint(`${DEFAULT_COLOR}The hack percent must be > 0 and <= 1.`);
 
 	const enough = EnoughRAM(ns, target, hackPct);
 
 	if(enough !== "")
-		return ns.tprint(`You need ${enough} to hack "${target}" at ${hackPct * 100}%.`);
+		return ns.tprint(`${DEFAULT_COLOR}You need ${enough} to hack "${target}" at ${hackPct * 100}%.`);
 
 	while(true) {
 		await Prepare(ns, target);

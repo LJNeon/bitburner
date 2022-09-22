@@ -1,3 +1,4 @@
+import {TAIL_COLORS, DEFAULT_COLOR} from "constants.js";
 import {ScanAll} from "utility.js";
 
 /** @param {import("../").NS} ns */
@@ -7,19 +8,19 @@ export async function main(ns) {
 	const targets = FindBestServer(ns, 10);
 
 	if(targets.length === 0)
-		return ns.tprint("Oops! No valid servers to hack found.");
+		return ns.tprint(`${DEFAULT_COLOR}Oops! No valid servers to hack found.`);
 
-	let message = "Best Servers to Hack:";
+	let message = `${TAIL_COLORS[4]}Best Servers to Hack:`;
 
 	for(let i = 0; i < targets.length; i++)
-		message += `\n${i + 1}. ${targets[i]}`;
+		message += `\n${TAIL_COLORS[4]}${i + 1}. ${DEFAULT_COLOR}${targets[i]}`;
 
 	ns.tprint(message);
 }
 
 /** @param {import("../").NS} ns */
 function ScoreServer(ns, server) {
-	return ns.getServerMaxMoney(server) / ns.getServerMinSecurityLevel(server);
+	return ns.getServerMaxMoney(server) / ns.getServerMinSecurityLevel(server) / ns.getWeakenTime(server);
 }
 
 /** @param {import("../").NS} ns */

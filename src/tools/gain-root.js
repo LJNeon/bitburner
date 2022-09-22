@@ -1,3 +1,4 @@
+import {DEFAULT_COLOR} from "constants.js";
 import {ScanAll} from "utility.js";
 
 const portOpeners = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"];
@@ -28,5 +29,5 @@ export async function main(ns) {
 			await ns.scp(["weaken.js", "grow.js", "hack.js"], target);
 	}
 
-	ns.tprint(`Gained root access to ${targets.length} server${targets.length === 1 ? "" : "s"}.`);
+	ns.tprint(`${DEFAULT_COLOR}Gained root access to ${targets.length} server${targets.length === 1 ? "" : "s"}.`);
 }
