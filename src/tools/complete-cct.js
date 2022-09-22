@@ -876,7 +876,7 @@ class Rewards {
 			results.push(`${ns.nFormat(rep, "0.00a")} reputation for ${name}`);
 
 		if(this.all > 0)
-			results.push(`${ns.nFormat(this.all, "0.00a")} reputation for all factions.`);
+			results.push(`${ns.nFormat(this.all, "0.00a")} reputation for all factions`);
 
 		for(const [name, rep] of this.factions.entries())
 			results.push(`${ns.nFormat(rep, "0.00a")} reputation for ${name}`);
@@ -924,5 +924,5 @@ export async function main(ns) {
 	if(total === 0)
 		ns.tprint(`${DEFAULT_COLOR}Found no CCTs to complete.`);
 	else
-		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list(ns)}.`);
+		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list(ns)}`);
 }
