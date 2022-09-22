@@ -810,7 +810,7 @@ export async function main(ns) {
 	ns.disableLog("ALL");
 
 	const servers = FindContracts(ns);
-	const rewards = new Rewards();
+	const rewards = new Rewards(ns);
 	let success = 0;
 	let total = 0;
 
