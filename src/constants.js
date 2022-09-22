@@ -34,7 +34,7 @@ export const MONEY_PER_HACK = 0.5;
 // Time in milliseconds to wait between batcher tasks.
 export const SAFETY_DELAY = 150;
 // Time in milliseconds where a batch task is "too late" and the batch is cancelled.
-export const SAFETY_THRESHOLD = 25;
+export const SAFETY_THRESHOLD = 50;
 // Time in milliseconds after which the "simple" batcher should retry a batch.
 export const RETRY_AFTER = [60_000, "60s"];
 // Range in hacking skill levels that should be handled before the batcher needs to restart.
@@ -43,7 +43,10 @@ export const HACK_LEVEL_RANGE = 20;
 export const FOCUS_SMALL_THRESHOLD = 10_000;
 // GBs of total RAM across all accessible servers where a chain batcher is considered viable.
 export const CHAIN_VIABLE_THRESHOLD = 1_000_000;
-export const LEECH_PERCENTS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+export const LEECH_PERCENTS = [
+	0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.15, 0.2, 0.25,
+	0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9, 1
+];
 // Default color to use when logging.
 export const DEFAULT_COLOR = "\u001b[38;5;250m";
 // List of colors to use when logging batches.

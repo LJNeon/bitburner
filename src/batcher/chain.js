@@ -131,14 +131,14 @@ class Batcher {
 		const pids = [];
 
 		if(server.hackDifficulty > server.minDifficulty) {
-			const threads = GetWeakThreads(this.ns, this.server);
+			const threads = GetWeakThreads(server.hackDifficulty - server.minDifficulty);
 			const sec = server.hackDifficulty.toFixed(2);
 			const minSec = server.minDifficulty.toFixed(2);
 
 			this.ns.print(`${DEFAULT_COLOR}[!] ${sec}/${minSec} security.`);
 			pids.push(...RunScript(this.ns, "weaken.js", this.server, threads, true, true));
 		}else if(server.moneyAvailable < server.moneyMax) {
-			const threads = GetGrowThreads(this.ns, this.server, null, false);
+			const threads = GetGrowThreads(this.ns, server, this.ns.getPlayer());
 			const money = this.ns.nFormat(server.moneyAvailable, "$0[.0]a");
 			const moneyMax = this.ns.nFormat(server.moneyMax, "$0[.0]a");
 
@@ -154,7 +154,7 @@ class Batcher {
 
 		if(server.hackDifficulty === server.minDifficulty && server.moneyAvailable === server.moneyMax) {
 			this.stage = 1;
-			this.ns.print(`${DEFAULT_COLOR}[-] Running ${this.depth} batches in ${this.ns.tFormat(this.period)}.`);
+			this.ns.print(`${DEFAULT_COLOR}[-] Prepared! First batch done in ${this.ns.tFormat(this.period * this.depth)}.`);
 		}else if(this.preparing == null || CheckPids(this.ns, this.preparing)) {
 			this.StartPreparing();
 		}
@@ -178,7 +178,7 @@ class Batcher {
 
 		if(!batch.cancelled) {
 			batch.cancelled = true;
-			this.ns.print(`${DEFAULT_COLOR}[!] Batch ${id + 1} cancelled (${diff}).`);
+			this.ns.print(`${DEFAULT_COLOR}[!] Batch ${id + 1} cancelled (${diff.toFixed(2)}).`);
 		}
 
 		return which !== IDS.W1 && which !== IDS.W2;
@@ -192,13 +192,14 @@ class Batcher {
 			const which = i;
 
 			batch.pending[which] = this.scheduler.Schedule(which, now, this.delays[which], lateBy => {
-				const aboveMinSec = which !== IDS.W1 && which !== IDS.W2
-					&& this.ns.getServerMinSecurityLevel(this.server) < this.ns.getServerSecurityLevel(this.server);
+				const server = this.ns.getServer(this.server);
+				const notMinSec = server.minDifficulty !== server.hackDifficulty;
+				const spread = which === IDS.W1 || which === IDS.W2;
 
-				if((lateBy >= SAFETY_THRESHOLD || aboveMinSec) && this.CancelTask(id, which, aboveMinSec || lateBy))
+				if((lateBy >= SAFETY_THRESHOLD || notMinSec) && this.CancelTask(id, which, notMinSec || lateBy))
 					return;
 
-				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which]);
+				batch.pids[which] = RunScript(this.ns, scripts[which], this.server, this.threads[which], spread);
 			});
 		}
 

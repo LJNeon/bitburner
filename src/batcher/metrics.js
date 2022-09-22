@@ -23,7 +23,7 @@ export async function GetHackPercent(ns, target) {
 
 		const server = ns.getServer(target);
 		const {period: p, depth: d} = CalcPeriodDepth(ns, target, sizeLimit);
-		const nextProfit = Math.floor(server.moneyMax * hackPct) * d / (p / 1e3);
+		const nextProfit = Math.floor(server.moneyMax * hackPct) * d / (p * d / 1e3);
 
 		if(nextProfit > profit) {
 			pct = hackPct;
