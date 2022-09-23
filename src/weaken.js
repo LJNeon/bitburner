@@ -4,6 +4,6 @@ export async function main(ns) {
 
 	await ns.weaken(target);
 
-	if(port != null)
+	if(typeof port === "number")
 		ns.writePort(port, id);
 }

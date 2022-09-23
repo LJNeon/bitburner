@@ -4,7 +4,8 @@ import {ScanAll} from "utility/generic.js";
 export default class RAM {
 	/** @param {import("../").NS} ns */
 	constructor(ns, simulateMax = false) {
-		const servers = ScanAll(ns).filter(s => ns.hasRootAccess(s));
+		/** @type {import("../").Server[]} */
+		const servers = ScanAll(ns).map(n => ns.getServer(n)).filter(s => s.hasAdminRights && s.maxRam > 0);
 
 		this.chunks = [];
 		this.used = 0;
@@ -13,36 +14,34 @@ export default class RAM {
 		this.total = 0;
 
 		for(const server of servers) {
-			const target = ns.getServer(server);
-
-			if(server.startsWith("hacknet"))
+			if(server.hostname.startsWith("hacknet"))
 				continue;
 
-			const used = simulateMax ? 0 : target.ramUsed;
-			const free = target.maxRam - used;
-			const reserved = server === "home" ? MIN_HOME_RAM : 0;
+			const used = simulateMax ? 0 : server.ramUsed;
+			const free = server.maxRam - used;
+			const reserved = server.hostname === "home" ? MIN_HOME_RAM : 0;
 
 			this.used += used;
 			this.free += free;
 			this.reserved += reserved;
-			this.total += target.maxRam;
+			this.total += server.maxRam;
 
 			if(free >= 0) {
 				this.chunks.push({
-					server,
+					hostname: server.hostname,
 					used,
 					free,
-					total: target.maxRam,
+					total: server.maxRam,
 					reserved,
-					bought: target.purchasedByPlayer
+					bought: server.purchasedByPlayer
 				});
 			}
 		}
 
 		this.chunks.sort((a, b) => {
-			if(a.server === "home")
+			if(a.hostname === "home")
 				return 1;
-			else if(b.server === "home")
+			else if(b.hostname === "home")
 				return -1;
 			else if(a.free !== b.free)
 				return a.free - b.free;
@@ -55,8 +54,8 @@ export default class RAM {
 		return this.chunks;
 	}
 
-	Reserve(server, size) {
-		const match = this.chunks.find(c => c.server === server);
+	Reserve(hostname, size) {
+		const match = this.chunks.find(c => c.hostname === hostname);
 
 		if(match == null || match.free - match.used >= size)
 			return false;

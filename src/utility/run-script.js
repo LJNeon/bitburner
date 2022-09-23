@@ -7,7 +7,7 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 	const ram = new RAM(ns);
 	const focusSmall = ram.free - ram.reserved < FOCUS_SMALL_THRESHOLD;
 	let servers = ram.chunkList
-		.map(({server, free, reserved}) => ({name: server, threads: Math.floor((free - reserved) / threadRAM)}))
+		.map(({hostname, free, reserved}) => ({hostname, threads: Math.floor((free - reserved) / threadRAM)}))
 		.filter(s => s.threads > 0);
 
 	if(focusSmall)
@@ -37,7 +37,7 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 
 	for(const server of servers) {
 		const spawn = Math.min(server.threads, threads - spawned);
-		const pid = ns.exec(script, server.name, spawn, target, ...args);
+		const pid = ns.exec(script, server.hostname, spawn, target, ...args, Math.random().toString(16).slice(2));
 
 		if(pid === 0) {
 			pids.forEach(id => ns.kill(id));
