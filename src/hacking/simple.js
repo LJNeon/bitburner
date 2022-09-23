@@ -20,20 +20,19 @@ function EnoughRAM(ns, target, hackPct) {
 
 	if(result == null)
 		return growMsg;
-	else
-		ram.Reserve(result.server, result.size);
 
+	ram.Reserve(result.server, result.size);
 	result = ram.Smallest(hackRam);
 
 	if(result == null)
 		return `${growMsg} and another with ${ns.nFormat(hackRam * 1e9, "0.00b")} RAM`;
-	else
-		ram.Reserve(result.server, result.size);
+
+	ram.Reserve(result.server, result.size);
 
 	if(ram.free - ram.reserved < weakRam)
 		return `a total of ${ns.nFormat((weakRam + growRam + hackRam) * 1e9, "0.00b")} RAM`;
-	else
-		return "";
+
+	return "";
 }
 
 /** @param {import("../").NS} ns */

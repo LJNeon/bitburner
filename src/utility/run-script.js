@@ -6,6 +6,7 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 	const threadRAM = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
 	const ram = new RAM(ns);
 	const focusSmall = ram.free - ram.reserved < FOCUS_SMALL_THRESHOLD;
+	const homeBonus = 1 + ((ns.getServer("home").cpuCores - 1) / 16);
 	let servers = ram.chunkList
 		.map(({hostname, free, reserved}) => ({hostname, threads: Math.floor((free - reserved) / threadRAM)}))
 		.filter(s => s.threads > 0);
@@ -37,7 +38,8 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 
 	for(const server of servers) {
 		const spawn = Math.min(server.threads, threads - spawned);
-		const pid = ns.exec(script, server.hostname, spawn, target, ...args, Math.random().toString(16).slice(2));
+		const amount = server.hostname === "home" ? Math.ceil(spawn / homeBonus) : spawn;
+		const pid = ns.exec(script, server.hostname, amount, target, ...args, Math.random().toString(16).slice(2));
 
 		if(pid === 0) {
 			pids.forEach(id => ns.kill(id));

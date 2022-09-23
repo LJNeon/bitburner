@@ -1,5 +1,5 @@
 import {DEFAULT_COLOR} from "utility/constants.js";
-import {ScanAll} from "utility/generic.js";
+import {ScanAll, nFormat} from "utility/generic.js";
 
 function RLECompress(data) {
 	const chars = Array.from(data);
@@ -37,6 +37,47 @@ function RLECompress(data) {
 	answer = `${answer}${count}${current}`;
 
 	return answer;
+}
+
+function LZDecompress(data) {
+	const compr = data;
+	let plain = "";
+
+	for(let i = 0; i < compr.length;) {
+		const literalLength = compr.charCodeAt(i) - 0x30;
+
+		if(literalLength < 0 || literalLength > 9 || i + 1 + literalLength > compr.length)
+			return null;
+
+		plain += compr.substring(i + 1, i + 1 + literalLength);
+		i += 1 + literalLength;
+
+		if(i >= compr.length)
+			break;
+
+		const backrefLength = compr.charCodeAt(i) - 0x30;
+
+		if(backrefLength < 0 || backrefLength > 9) {
+			return null;
+		}else if(backrefLength === 0) {
+			++i;
+		}else{
+			if(i + 1 >= compr.length)
+				return null;
+
+			const backrefOffset = compr.charCodeAt(i + 1) - 0x30;
+
+			if((backrefLength > 0 && (backrefOffset < 1 || backrefOffset > 9)) || backrefOffset > plain.length)
+				return null;
+
+			for(let j = 0; j < backrefLength; ++j)
+				plain += plain[plain.length - backrefOffset];
+
+			i += 2;
+		}
+	}
+
+	return plain;
 }
 
 function SetLZ(state, i, j, str) {
@@ -79,7 +120,6 @@ function LZCompress(data) {
 			}
 		}
 
-		// handle backreferences
 		for(let offset = 1; offset <= 9; ++offset) {
 			for(let length = 1; length <= 9; ++length) {
 				const string = cur_state[offset][length];
@@ -146,6 +186,14 @@ function LZCompress(data) {
 	}
 
 	return result ?? "";
+}
+
+function CaesarCipher(data) {
+	const cipher = [...data[0]]
+		.map((a) => a === " " ? a : String.fromCharCode(((a.charCodeAt(0) - 65 - data[1] + 26) % 26) + 65))
+		.join("");
+
+	return cipher;
 }
 
 function VigenereCipher(data) {
@@ -809,8 +857,12 @@ function AnswerContract(type, data) {
 	switch(type) {
 		case "Compression I: RLE Compression":
 			return RLECompress(data);
+		case "Compression II: LZ Decompression":
+			return LZDecompress(data);
 		case "Compression III: LZ Compression":
 			return LZCompress(data);
+		case "Encryption I: Caesar Cipher":
+			return CaesarCipher(data);
 		case "Encryption II: Vigenère Cipher":
 			return VigenereCipher(data);
 		case "Array Jumping Game":
@@ -887,20 +939,20 @@ class Rewards {
 		}
 	}
 
-	list(ns) {
+	list() {
 		const results = [];
 
 		if(this.money > 0)
-			results.push(`${ns.nFormat(this.money, "$0.00a")}`);
+			results.push(`$${nFormat(this.money)}`);
 
 		for(const [name, rep] of this.companies.entries())
-			results.push(`${ns.nFormat(rep, "0.00a")} reputation for ${name}`);
+			results.push(`${nFormat(rep)} reputation for ${name}`);
 
 		if(this.all > 0)
-			results.push(`${ns.nFormat(this.all, "0.00a")} reputation for all factions`);
+			results.push(`${nFormat(this.all)} reputation for all factions`);
 
 		for(const [name, rep] of this.factions.entries())
-			results.push(`${ns.nFormat(rep, "0.00a")} reputation for ${name}`);
+			results.push(`${nFormat(rep)} reputation for ${name}`);
 
 		return results.length === 1 ? ` ${results[0]}` : `\n  - ${results.join("\n  - ")}`;
 	}
@@ -945,5 +997,5 @@ export async function main(ns) {
 	if(total === 0)
 		ns.tprint(`${DEFAULT_COLOR}Found no CCTs to complete.`);
 	else
-		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list(ns)}`);
+		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list()}`);
 }

@@ -6,7 +6,7 @@ import {GetHackPercent} from "utility/metrics.js";
 export async function main(ns) {
 	ns.disableLog("ALL");
 
-	const targets = await FindBestServer(ns, 10);
+	const targets = await FindBestServer(ns, 5);
 
 	if(targets.length === 0)
 		return ns.tprint(`${DEFAULT_COLOR}Oops! No valid servers to hack found.`);

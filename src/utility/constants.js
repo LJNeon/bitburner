@@ -33,10 +33,10 @@ export const PERSONAL_SERVER_SHARE = 0.25;
 export const MONEY_PER_HACK = 0.5;
 // Time in milliseconds to wait between batcher tasks.
 export const SAFETY_DELAY = 150;
-// Time in milliseconds where a batch task is "too late" and the batch is cancelled.
-export const SAFETY_THRESHOLD = 25;
+// Time in milliseconds where a batch task is "too late", causing the hack and sometimes grow to be cancelled.
+export const SAFETY_THRESHOLD = 50;
 // Time in milliseconds after which the "simple" batcher should retry a batch.
-export const RETRY_AFTER = [60_000, "60s"];
+export const RETRY_AFTER = 60_000;
 // Range in hacking skill levels that should be handled before the batcher needs to restart.
 export const HACK_LEVEL_RANGE = 20;
 // GBs of total RAM across all accessible servers where small servers should no longer be prioritized.
@@ -52,8 +52,21 @@ export const LEECH_PERCENTS = [
 export const CHAIN_PORT = 1;
 // Default color to use when logging.
 export const DEFAULT_COLOR = "\u001b[38;5;250m";
+// Color indicating success to use when logging.
+export const SUCCESS_COLOR = "\u001b[38;5;78m";
+// Color indicating a warning to use when logging.
+export const WARNING_COLOR = "\u001b[38;5;185m";
+// Color indicating failure to use when logging.
+export const FAILURE_COLOR = "\u001b[38;5;203m";
 // List of colors to use when logging batches.
 export const TAIL_COLORS = [
 	"\u001b[38;5;203m", "\u001b[38;5;215m", "\u001b[38;5;185m", "\u001b[38;5;78m",
 	"\u001b[38;5;116m", "\u001b[38;5;33m", "\u001b[38;5;141m"
 ];
+// Abbreviations to use when formatting normal numbers.
+export const NORM_ABBRS = [
+	"", "k", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc",
+	"Ud", "Dd", "Td", "QaD", "QiD", "SxD", "SpD", "OcD", "NoD", "Vg"
+];
+// Abbreviations to use when formatting an amount of bytes.
+export const BYTE_ABBRS = ["b", "kB", "GB", "TB", "PB", "EB", "ZB", "YB"];
