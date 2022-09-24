@@ -16,14 +16,17 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 		const {free, reserved} = ram.GetServer("home");
 
 		if(free - reserved >= threadRAM * threads) {
-			return [ns.exec(
+			pids.push(ns.exec(
 				script,
 				"home",
 				Math.ceil(threads / homeBonus),
 				target,
 				...args,
 				Math.random().toString(16).slice(2)
-			)];
+			));
+
+			if(!spread)
+				return pids;
 		}
 	}
 

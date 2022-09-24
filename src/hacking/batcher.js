@@ -137,7 +137,7 @@ class Batcher {
 			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
 
 			this.ns.clearLog();
-			this.ns.print(`${FAILURE_COLOR}[-] Stopping...${Table({
+			this.ns.print(`${FAILURE_COLOR}[!] Stopping...${Table({
 				"Remaining Batches": nFormat(this.batches.size, "l"),
 				"Cancelled Batches": `${nFormat(this.cancelled, "l")} (${cancelledPct}%)`,
 				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
