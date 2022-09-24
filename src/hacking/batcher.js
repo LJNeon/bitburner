@@ -1,9 +1,8 @@
 import {
 	IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, CHAIN_PORT,
-	DEFAULT_COLOR, SUCCESS_COLOR, FAILURE_COLOR, WARNING_COLOR,
-	SAFETY_DELAY
+	SUCCESS_COLOR, FAILURE_COLOR, WARNING_COLOR, SAFETY_DELAY
 } from "utility/constants.js";
-import {CheckPids, nFormat} from "utility/generic.js";
+import {CheckPids, nFormat, Table} from "utility/generic.js";
 import {GetHackPercent} from "utility/metrics.js";
 import RunScript from "utility/run-script.js";
 import {CalcDelays} from "utility/stalefish.js";
@@ -87,9 +86,9 @@ class Batcher {
 		 * 0 = preparing
 		 * 1 = running
 		 * 2 = stopping/stopped
-		 * 3 = stopped (don't restart)
 		.*/
 		this.stage = 0;
+		this.restart = true;
 		this.ran = 0;
 		this.lastID = 0;
 		this.cancelled = 0;
@@ -108,10 +107,7 @@ class Batcher {
 	}
 
 	PrintStatus() {
-		const d = DEFAULT_COLOR;
-
 		if(this.stage === 0) {
-			const c = WARNING_COLOR;
 			const server = this.ns.getServer(this.server);
 			const sec = nFormat(server.hackDifficulty, "l", 2);
 			const minSec = nFormat(server.minDifficulty, "l", 2);
@@ -119,22 +115,33 @@ class Batcher {
 			const moneyMax = nFormat(server.moneyMax);
 
 			this.ns.clearLog();
-			this.ns.print(`${c}[?] Preparing...`);
-			this.ns.print(` ${c}~${d} Security ${c}|${d} ${sec}/${minSec}`);
-			this.ns.print(` ${c}~${d} Cash     ${c}|${d} $${money}/$${moneyMax}`);
-		}else if(this.stage === 1 || this.stage === 2) {
-			const c = this.stage === 1 ? SUCCESS_COLOR : FAILURE_COLOR;
+			this.ns.print(`${WARNING_COLOR}[?] Preparing...${Table(
+				{Security: `${sec}/${minSec}`, Cash: `$${money}/$${moneyMax}`},
+				WARNING_COLOR
+			)}`);
+		}else if(this.stage === 1) {
 			const cancelledPct = nFormat(this.cancelled / this.ran * 100, "l", 2);
 			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
 
 			this.ns.clearLog();
-			this.ns.print(`${c}[${this.stage === 1 ? "-" : "!"}] ${this.stage === 1 ? "Running" : "Stopping"}...`);
-			this.ns.print(` ${c}~${d} Batch Duration    ${c}|${d} ${this.ns.tFormat(this.period * this.depth)}`);
-			this.ns.print(` ${c}~${d} Batcher Depth     ${c}|${d} ${this.depth}`);
-			this.ns.print(` ${c}~${d} Hack Percent      ${c}|${d} ${Math.floor(this.percent * 100)}%`);
-			this.ns.print(` ${c}~${d} Max Hacking Level ${c}|${d} ${nFormat(this.levelMax, "l")}`);
-			this.ns.print(` ${c}~${d} Cancelled Batches ${c}|${d} ${nFormat(this.cancelled, "l")} (${cancelledPct}%)`);
-			this.ns.print(` ${c}~${d} Desynced Tasks    ${c}|${d} ${nFormat(this.desynced, "l")} (${desyncedPct}%)`);
+			this.ns.print(`${SUCCESS_COLOR}[-] Running...${Table({
+				"Batch Duration": this.ns.tFormat(this.period * this.depth),
+				"Max Depth": String(this.depth),
+				"Hack Percent": `${this.percent * 100}%`,
+				"Max Hacking Level": nFormat(this.levelMax, "l"),
+				"Cancelled Batches": `${nFormat(this.cancelled, "l")} (${cancelledPct}%)`,
+				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
+			}, SUCCESS_COLOR)}`);
+		}else if(this.stage === 2) {
+			const cancelledPct = nFormat(this.cancelled / this.ran * 100, "l", 2);
+			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
+
+			this.ns.clearLog();
+			this.ns.print(`${FAILURE_COLOR}[-] Stopping...${Table({
+				"Remaining Batches": nFormat(this.batches.size, "l"),
+				"Cancelled Batches": `${nFormat(this.cancelled, "l")} (${cancelledPct}%)`,
+				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
+			}, FAILURE_COLOR)}`);
 		}
 
 	}
@@ -160,8 +167,9 @@ class Batcher {
 		const {pct, period, depth} = await GetHackPercent(this.ns, this.server);
 
 		if(pct === 0) {
-			this.stage = 3;
-			this.ns.print(`${FAILURE_COLOR} Not enough free RAM, exiting...`);
+			this.restart = false;
+			this.stage = 2;
+			this.ns.print(`${FAILURE_COLOR}Not enough free RAM, exiting...`);
 
 			return;
 		}
@@ -182,10 +190,6 @@ class Batcher {
 			await this.FinishPreparing();
 		else if(this.preparing == null || CheckPids(this.ns, this.preparing))
 			this.StartPreparing();
-	}
-
-	Stop() {
-		this.stage = 2;
 	}
 
 	CancelTask(id, which) {
@@ -309,6 +313,10 @@ class Batcher {
 	Stopped() {
 		return this.stage >= 2 && this.batches.size === 0;
 	}
+
+	CanRestart() {
+		return this.restart;
+	}
 }
 
 /** @param {import("../").NS} ns */
@@ -326,7 +334,7 @@ export async function main(ns) {
 	let batcher = new Batcher(ns, target);
 
 	while(true) {
-		if(batcher.Stopped() && batcher.stage === 2) {
+		if(batcher.Stopped() && batcher.CanRestart()) {
 			await ns.sleep(SAFETY_DELAY * 2);
 			batcher = new Batcher(ns, target);
 		}

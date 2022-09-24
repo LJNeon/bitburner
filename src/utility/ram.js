@@ -54,8 +54,12 @@ export default class RAM {
 		return this.chunks;
 	}
 
+	GetServer(hostname) {
+		return this.chunks.find(c => c.hostname === hostname);
+	}
+
 	Reserve(hostname, size) {
-		const match = this.chunks.find(c => c.hostname === hostname);
+		const match = this.GetServer(hostname);
 
 		if(match == null || match.free - match.used >= size)
 			return false;

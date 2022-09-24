@@ -32,17 +32,13 @@ export const PERSONAL_SERVER_SHARE = 0.25;
 // Percent of a server's total money to take in a single hack.
 export const MONEY_PER_HACK = 0.5;
 // Time in milliseconds to wait between batcher tasks.
-export const SAFETY_DELAY = 150;
+export const SAFETY_DELAY = 100;
 // Time in milliseconds where a batch task is "too late", causing the hack and sometimes grow to be cancelled.
 export const SAFETY_THRESHOLD = 50;
-// Time in milliseconds after which the "simple" batcher should retry a batch.
-export const RETRY_AFTER = 60_000;
 // Range in hacking skill levels that should be handled before the batcher needs to restart.
 export const HACK_LEVEL_RANGE = 20;
-// GBs of total RAM across all accessible servers where small servers should no longer be prioritized.
-export const FOCUS_SMALL_THRESHOLD = 10_000;
-// GBs of total RAM across all accessible servers where a chain batcher is considered viable.
-export const CHAIN_VIABLE_THRESHOLD = 1_000_000;
+// GBs of total RAM across all accessible servers where spreading threads should be disabled.
+export const SPREAD_THRESHOLD = 10_000;
 // Viable percents of a server's total money to hack in a single pass.
 export const LEECH_PERCENTS = [
 	0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.15, 0.2, 0.25,

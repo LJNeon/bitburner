@@ -1,4 +1,6 @@
-import {FAILURE_COLOR, WARNING_COLOR, SUCCESS_COLOR} from "utility/constants.js";
+import {
+	SAFETY_DELAY, FAILURE_COLOR, WARNING_COLOR, SUCCESS_COLOR
+} from "utility/constants.js";
 import {SleepPids, nFormat} from "utility/generic.js";
 import RunScript from "utility/run-script.js";
 import {GetWeakThreads, GetGrowThreads} from "utility/threads.js";
@@ -6,15 +8,11 @@ import {GetWeakThreads, GetGrowThreads} from "utility/threads.js";
 /** @param {import("../").NS} ns */
 async function Prepare(ns, target) {
 	let server;
-	let already = true;
 
 	while((server = ns.getServer(target)).hackDifficulty !== server.minDifficulty
 			|| server.moneyAvailable !== server.moneyMax) {
 		const {hackDifficulty, minDifficulty, moneyAvailable, moneyMax} = server;
 		const pids = [];
-
-		if(already)
-			already = false;
 
 		if(hackDifficulty !== minDifficulty) {
 			const threads = GetWeakThreads(hackDifficulty - minDifficulty);
@@ -36,8 +34,7 @@ async function Prepare(ns, target) {
 		await SleepPids(ns, pids);
 	}
 
-	if(!already)
-		ns.print(`${SUCCESS_COLOR}[-] Server prepared.`);
+	ns.print(`${SUCCESS_COLOR}[-] Server prepared.`);
 }
 
 /** @param {import("../").NS} ns */
@@ -61,5 +58,6 @@ export async function main(ns) {
 			return ns.print(`${FAILURE_COLOR}Not enough RAM to spawn a single thread!`);
 
 		await SleepPids(ns, pids);
+		await ns.sleep(SAFETY_DELAY * 2);
 	}
 }

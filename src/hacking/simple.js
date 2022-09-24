@@ -7,6 +7,8 @@ import {GetWeakThreads, GetGrowThreads, GetHackThreads} from "utility/threads.js
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {
+	ns.disableLog("ALL");
+
 	const [target, pct = MONEY_PER_HACK] = ns.args;
 
 	try {

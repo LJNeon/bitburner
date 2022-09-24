@@ -922,7 +922,7 @@ class Rewards {
 		this.factions = new Map();
 	}
 
-	add(reward) {
+	add(ns, reward) {
 		const start = reward.indexOf(" ") + 1;
 
 		if(reward.includes("faction reputation")) {
@@ -935,7 +935,7 @@ class Rewards {
 		}else if(reward.includes("$")) {
 			this.money += Number(reward.slice(start + 1, -1)) * 1e6;
 		}else{
-			this.ns.tprint("UNLISTED REWARD! ", reward);
+			ns.tprint("UNLISTED REWARD! ", reward);
 		}
 	}
 
@@ -963,7 +963,7 @@ export async function main(ns) {
 	ns.disableLog("ALL");
 
 	const servers = FindContracts(ns);
-	const rewards = new Rewards(ns);
+	const rewards = new Rewards();
 	let success = 0;
 	let total = 0;
 
@@ -987,7 +987,7 @@ export async function main(ns) {
 				ns.tprint(`${DEFAULT_COLOR}FAILED CONTRACT! Type: ${type} Data: ${JSON.stringify(data)}`);
 			}else{
 				++success;
-				rewards.add(reward);
+				rewards.add(ns, reward);
 			}
 
 			++total;

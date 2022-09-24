@@ -1,4 +1,4 @@
-import {NORM_ABBRS, BYTE_ABBRS} from "utility/constants.js";
+import {DEFAULT_COLOR, NORM_ABBRS, BYTE_ABBRS} from "utility/constants.js";
 
 /** @param {import("../").NS} ns */
 export function GenID(existing = []) {
@@ -75,4 +75,19 @@ export function nFormat(num, format = "n", dec = 0) {
 		return "infinite";
 
 	return `${Floor(num / Math.pow(10, (which * 3) - places)) / Math.pow(10, places)}${abbrs[which]}`;
+}
+export function Table(rows, color) {
+	const longestKey = Object.keys(rows).map(k => k.length).sort((a, b) => b - a)[0];
+	const longestValue = Object.values(rows).map(v => v.length).sort((a, b) => b - a)[0];
+	const separator = `${color}|${DEFAULT_COLOR}`;
+	let result = "";
+
+	for(const row in rows) {
+		const key = row.length < longestKey ? row.padEnd(longestKey) : row;
+		const value = rows[row].length < longestValue ? rows[row].padEnd(longestValue) : rows[row];
+
+		result += `\n ${separator} ${key} ${separator} ${value} ${separator}`;
+	}
+
+	return result;
 }

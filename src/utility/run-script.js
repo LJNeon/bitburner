@@ -1,17 +1,37 @@
-import {WEAKEN_GROW_RAM, HACK_RAM, FOCUS_SMALL_THRESHOLD} from "utility/constants.js";
+import {WEAKEN_GROW_RAM, HACK_RAM, SPREAD_THRESHOLD} from "utility/constants.js";
 import RAM from "utility/ram.js";
 
 /** @param {import("../").NS} ns */
 export default function RunScript(ns, script, target, threads, spread = false, partial = false, ...args) {
 	const threadRAM = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
 	const ram = new RAM(ns);
-	const focusSmall = ram.free - ram.reserved < FOCUS_SMALL_THRESHOLD;
 	const homeBonus = 1 + ((ns.getServer("home").cpuCores - 1) / 16);
+	const pids = [];
+	let spawned = 0;
+
+	if(spread && ram.free - ram.reserved >= SPREAD_THRESHOLD)
+		spread = false;
+
+	if(homeBonus !== 1 && script === "grow.js") {
+		const {free, reserved} = ram.GetServer("home");
+
+		if(free - reserved >= threadRAM * threads) {
+			return [ns.exec(
+				script,
+				"home",
+				Math.ceil(threads / homeBonus),
+				target,
+				...args,
+				Math.random().toString(16).slice(2)
+			)];
+		}
+	}
+
 	let servers = ram.chunkList
 		.map(({hostname, free, reserved}) => ({hostname, threads: Math.floor((free - reserved) / threadRAM)}))
 		.filter(s => s.threads > 0);
 
-	if(focusSmall)
+	if(script === "weaken.js")
 		servers.sort((a, b) => a.threads - b.threads);
 	else
 		servers.sort((a, b) => b.threads - a.threads);
@@ -25,16 +45,13 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 
 		if(server == null) {
 			if(partial)
-				servers = [servers[focusSmall ? servers.length - 1 : 0]];
+				servers = [servers[0]];
 			else
 				return [];
 		}else{
 			servers = [server];
 		}
 	}
-
-	const pids = [];
-	let spawned = 0;
 
 	for(const server of servers) {
 		const spawn = Math.min(server.threads, threads - spawned);
