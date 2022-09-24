@@ -67,34 +67,34 @@ export default class RAM {
 	}
 
 	Smallest(min = 0) {
-		let server;
+		let hostname;
 		let size = 0;
 
 		for(const chunk of this.chunks) {
 			const free = chunk.free - chunk.reserved;
 
-			if((server == null || free < size) && free >= min) {
-				server = chunk.server;
+			if((hostname == null || free < size) && free >= min) {
+				hostname = chunk.hostname;
 				size = free;
 			}
 		}
 
-		return server == null ? null : {server, size};
+		return hostname == null ? null : {hostname, size};
 	}
 
 	Largest() {
-		let server;
+		let hostname;
 		let size = 0;
 
 		for(const chunk of this.chunks) {
 			const free = chunk.free - chunk.reserved;
 
-			if(server == null || free > size) {
-				server = chunk.server;
+			if(hostname == null || free > size) {
+				hostname = chunk.hostname;
 				size = free;
 			}
 		}
 
-		return server == null ? null : {server, size};
+		return hostname == null ? null : {hostname, size};
 	}
 }

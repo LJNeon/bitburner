@@ -1,6 +1,7 @@
 import {
 	IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, CHAIN_PORT,
-	DEFAULT_COLOR, SUCCESS_COLOR, FAILURE_COLOR, WARNING_COLOR
+	DEFAULT_COLOR, SUCCESS_COLOR, FAILURE_COLOR, WARNING_COLOR,
+	SAFETY_DELAY
 } from "utility/constants.js";
 import {CheckPids, nFormat} from "utility/generic.js";
 import {GetHackPercent} from "utility/metrics.js";
@@ -72,66 +73,70 @@ class Scheduler {
 
 class Batcher {
 	/** @param {import("../").NS} ns */
-	constructor(ns, metrics, first) {
+	constructor(ns, server) {
 		this.createdAt = performance.now();
 		/** @type {import("../").NS} */
 		this.ns = ns;
-		this.server = metrics.target;
-		this.hackPct = metrics.pct;
-		this.period = metrics.period;
-		this.depth = metrics.depth;
-		this.level = ns.getPlayer().skills.hacking;
-		this.levelMax = this.level + HACK_LEVEL_RANGE;
+		this.server = server;
 		this.port = ns.getPortHandle(CHAIN_PORT);
 		this.port.clear();
 		this.scheduler = new Scheduler();
 		this.batches = new Map();
 		this.ids = new Map();
-		// 0 = preparing, 1 = running, 2 = stopping
+		/*.
+		 * 0 = preparing
+		 * 1 = running
+		 * 2 = stopping/stopped
+		 * 3 = stopped (don't restart)
+		.*/
 		this.stage = 0;
 		this.ran = 0;
 		this.lastID = 0;
+		this.cancelled = 0;
+		this.desynced = 0;
 		this.AdjustForLevel();
-		ns.print(`${SUCCESS_COLOR}[-] ${first ? "S" : "Res"}tarting...`);
-		ns.print(`${SUCCESS_COLOR} ~ ${DEFAULT_COLOR}Depth     | ${metrics.depth}`);
-		ns.print(`${SUCCESS_COLOR} ~ ${DEFAULT_COLOR}Hack %    | ${Math.floor(metrics.pct * 100)}%`);
-		ns.print(`${SUCCESS_COLOR} ~ ${DEFAULT_COLOR}Max Level | ${nFormat(this.levelMax, "l")}`);
-		ns.print(`${SUCCESS_COLOR} ~ ${DEFAULT_COLOR}Duration  | ${ns.tFormat(metrics.period * metrics.depth)}`);
 	}
 
 	GetID() {
 		return this.lastID = (this.lastID + 1) % Number.MAX_SAFE_INTEGER;
 	}
 
-	GetName(which) {
-		switch(which) {
-			case IDS.W1:
-			case IDS.W2:
-				return "Weaken";
-			case IDS.G:
-				return "Grow";
-			case IDS.H:
-				return "Hack";
-		}
-	}
-
-	EndOrder(which) {
-		switch(which) {
-			case IDS.H:
-				return "1";
-			case IDS.W1:
-				return "2";
-			case IDS.G:
-				return "3";
-			case IDS.W2:
-				return "4";
-		}
-	}
-
 	AdjustForLevel() {
-		this.threads = GetThreads(this.ns, this.server, this.hackPct);
+		this.threads = GetThreads(this.ns, this.server, this.percent);
 		this.delays = CalcDelays(this.ns, this.server, this.period, this.depth);
 		this.scheduler.AdjustDelays(this.delays);
+	}
+
+	PrintStatus() {
+		const d = DEFAULT_COLOR;
+
+		if(this.stage === 0) {
+			const c = WARNING_COLOR;
+			const server = this.ns.getServer(this.server);
+			const sec = nFormat(server.hackDifficulty, "l", 2);
+			const minSec = nFormat(server.minDifficulty, "l", 2);
+			const money = nFormat(server.moneyAvailable);
+			const moneyMax = nFormat(server.moneyMax);
+
+			this.ns.clearLog();
+			this.ns.print(`${c}[?] Preparing...`);
+			this.ns.print(` ${c}~${d} Security ${c}|${d} ${sec}/${minSec}`);
+			this.ns.print(` ${c}~${d} Cash     ${c}|${d} $${money}/$${moneyMax}`);
+		}else if(this.stage === 1 || this.stage === 2) {
+			const c = this.stage === 1 ? SUCCESS_COLOR : FAILURE_COLOR;
+			const cancelledPct = nFormat(this.cancelled / this.ran * 100, "l", 2);
+			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
+
+			this.ns.clearLog();
+			this.ns.print(`${c}[${this.stage === 1 ? "-" : "!"}] ${this.stage === 1 ? "Running" : "Stopping"}...`);
+			this.ns.print(` ${c}~${d} Batch Duration    ${c}|${d} ${this.ns.tFormat(this.period * this.depth)}`);
+			this.ns.print(` ${c}~${d} Batcher Depth     ${c}|${d} ${this.depth}`);
+			this.ns.print(` ${c}~${d} Hack Percent      ${c}|${d} ${Math.floor(this.percent * 100)}%`);
+			this.ns.print(` ${c}~${d} Max Hacking Level ${c}|${d} ${nFormat(this.levelMax, "l")}`);
+			this.ns.print(` ${c}~${d} Cancelled Batches ${c}|${d} ${nFormat(this.cancelled, "l")} (${cancelledPct}%)`);
+			this.ns.print(` ${c}~${d} Desynced Tasks    ${c}|${d} ${nFormat(this.desynced, "l")} (${desyncedPct}%)`);
+		}
+
 	}
 
 	StartPreparing() {
@@ -140,49 +145,60 @@ class Batcher {
 
 		if(server.hackDifficulty > server.minDifficulty) {
 			const threads = GetWeakThreads(server.hackDifficulty - server.minDifficulty);
-			const sec = nFormat(server.hackDifficulty, "l", 2);
-			const minSec = nFormat(server.minDifficulty, "l", 2);
 
-			this.ns.print(`${WARNING_COLOR}[?] ${sec}/${minSec} security.`);
 			pids.push(...RunScript(this.ns, "weaken.js", this.server, threads, true, true));
 		}else if(server.moneyAvailable < server.moneyMax) {
 			const threads = GetGrowThreads(this.ns, server, this.ns.getPlayer());
-			const money = nFormat(server.moneyAvailable);
-			const moneyMax = nFormat(server.moneyMax);
 
-			this.ns.print(`${WARNING_COLOR}[?] $${money}/$${moneyMax} money.`);
 			pids.push(...RunScript(this.ns, "grow.js", this.server, threads, false, true));
 		}
 
 		this.preparing = pids;
 	}
 
-	Prepare() {
+	async FinishPreparing() {
+		const {pct, period, depth} = await GetHackPercent(this.ns, this.server);
+
+		if(pct === 0) {
+			this.stage = 3;
+			this.ns.print(`${FAILURE_COLOR} Not enough free RAM, exiting...`);
+
+			return;
+		}
+
+		this.stage = 1;
+		this.percent = pct;
+		this.period = period;
+		this.depth = depth;
+		this.level = this.ns.getPlayer().skills.hacking;
+		this.levelMax = this.level + HACK_LEVEL_RANGE;
+		this.AdjustForLevel();
+	}
+
+	async Prepare() {
 		const server = this.ns.getServer(this.server);
 
-		if(server.hackDifficulty === server.minDifficulty && server.moneyAvailable === server.moneyMax) {
-			this.stage = 1;
-			this.ns.print(`${SUCCESS_COLOR}[-] Preparations complete.`);
-		}else if(this.preparing == null || CheckPids(this.ns, this.preparing)) {
+		if(server.hackDifficulty === server.minDifficulty && server.moneyAvailable === server.moneyMax)
+			await this.FinishPreparing();
+		else if(this.preparing == null || CheckPids(this.ns, this.preparing))
 			this.StartPreparing();
-		}
 	}
 
 	Stop() {
 		this.stage = 2;
 	}
 
-	CancelTask(id, which, diff) {
+	CancelTask(id, which) {
 		const batch = this.batches.get(id);
 
-		if(which === IDS.W2 || which === IDS.G)
+		if(which === IDS.W2)
 			this.scheduler.Delete(batch.scheduled[IDS.G]);
 
 		this.scheduler.Delete(batch.scheduled[IDS.H]);
 
 		if(!batch.partial) {
+			++this.cancelled;
 			batch.partial = true;
-			this.ns.print(`${FAILURE_COLOR}[!] Batch ${id + 1} cancelled (${diff === true ? diff : diff.toFixed(2)}).`);
 		}
 
 		return which !== IDS.W1 && which !== IDS.W2;
@@ -200,7 +216,7 @@ class Batcher {
 				const unpreped = server.hackDifficulty !== server.minDifficulty || server.moneyAvailable !== server.moneyMax;
 				const spread = which === IDS.W1 || which === IDS.W2;
 
-				if((lateBy >= SAFETY_THRESHOLD || unpreped) && this.CancelTask(batchID, which, unpreped || lateBy))
+				if((lateBy >= SAFETY_THRESHOLD || unpreped) && this.CancelTask(batchID, which))
 					return;
 
 				const id = this.GetID();
@@ -220,17 +236,20 @@ class Batcher {
 			const id = this.port.read();
 			const batchID = this.ids.get(id);
 			const batch = this.batches.get(batchID);
-			const which = batch.running[id];
+			const which = batch?.running[id];
+
+			if(batch == null)
+				continue;
 
 			if(!batch.partial) {
 				if(which === IDS.H && Object.keys(batch.running).length !== 4)
-					this.ns.print(`${FAILURE_COLOR}[!] Batch ${batchID + 1}'s H finished out of order.`);
+					++this.desynced;
 				else if(which === IDS.W1 && Object.keys(batch.running).length !== 3)
-					this.ns.print(`${FAILURE_COLOR}[!] Batch ${batchID + 1}'s W1 finished out of order.`);
+					++this.desynced;
 				else if(which === IDS.G && Object.keys(batch.running).length !== 2)
-					this.ns.print(`${FAILURE_COLOR}[!] Batch ${batchID + 1}'s G finished out of order.`);
+					++this.desynced;
 				else if(which === IDS.W2 && Object.keys(batch.running).length !== 1)
-					this.ns.print(`${FAILURE_COLOR}[!] Batch ${batchID + 1}'s W2 finished out of order.`);
+					++this.desynced;
 			}
 
 			delete batch.running[id];
@@ -242,6 +261,11 @@ class Batcher {
 				this.batches.delete(id);
 
 		}
+	}
+
+	HandleTasks(now) {
+		this.scheduler.Run(now);
+		this.ReadPort();
 	}
 
 	Run() {
@@ -260,14 +284,13 @@ class Batcher {
 		if(nextBatchAt <= now)
 			this.StartBatch(nextBatchAt);
 
-		this.scheduler.Run(now);
-		this.ReadPort();
+		this.HandleTasks(now);
 	}
 
-	Update() {
+	async Update() {
 		switch(this.stage) {
 			case 0:
-				this.Prepare();
+				await this.Prepare();
 
 				break;
 			case 1:
@@ -275,15 +298,16 @@ class Batcher {
 
 				break;
 			case 2:
-				this.scheduler.Run(performance.now());
-				this.ReadPort();
+				this.HandleTasks(performance.now());
 
 				break;
 		}
+
+		this.PrintStatus();
 	}
 
 	Stopped() {
-		return this.stage === 2 && this.batches.size === 0;
+		return this.stage >= 2 && this.batches.size === 0;
 	}
 }
 
@@ -299,27 +323,15 @@ export async function main(ns) {
 		return ns.tprint(`${FAILURE_COLOR}Server "${target}" doesn't exist.`);
 	}
 
-	let metrics = await GetHackPercent(ns, target);
-
-	if(metrics.pct === 0)
-		return ns.tprint(`${FAILURE_COLOR}[!] Not enough free RAM for batching on "${target}".`);
-
-	let batcher = new Batcher(ns, metrics, true);
+	let batcher = new Batcher(ns, target);
 
 	while(true) {
-		if(batcher.Stopped()) {
-			metrics = await GetHackPercent(ns, target);
-
-			if(metrics.pct === 0) {
-				ns.print(`${FAILURE_COLOR}[!] Not enough free RAM, exiting...`);
-
-				break;
-			}
-
-			batcher = new Batcher(ns, metrics, false);
+		if(batcher.Stopped() && batcher.stage === 2) {
+			await ns.sleep(SAFETY_DELAY * 2);
+			batcher = new Batcher(ns, target);
 		}
 
-		batcher.Update();
+		await batcher.Update();
 		await ns.sleep(5);
 	}
 }

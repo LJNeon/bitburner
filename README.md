@@ -6,7 +6,7 @@ A HWGW JIT chain batcher with clock-sync and stalefish delays.
 
 ## hacking/simple.js
 
-A HWGW non-chain batcher that prepares again after each batch if necessary.
+A basic sequential script that uses as much RAM as needed even if it's inefficient.
 
 ## hacking/xp.js
 
