@@ -9,21 +9,17 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 	const pids = [];
 	let spawned = 0;
 
-	if(spread && ram.free - ram.reserved >= SPREAD_THRESHOLD)
+	if(spread && script === "weaken.js" && ram.free - ram.reserved >= SPREAD_THRESHOLD)
 		spread = false;
 
 	if(homeBonus !== 1 && script === "grow.js") {
 		const {free, reserved} = ram.GetServer("home");
+		const spawn = Math.ceil(threads / homeBonus);
 
 		if(free - reserved >= threadRAM * threads) {
-			pids.push(ns.exec(
-				script,
-				"home",
-				Math.ceil(threads / homeBonus),
-				target,
-				...args,
-				Math.random().toString(16).slice(2)
-			));
+			pids.push(ns.exec(script, "home", spawn, target, ...args, Math.random().toString(16).slice(2)));
+			ram.Reserve("home", spawn * threadRAM);
+			spawned += spawn;
 
 			if(!spread)
 				return pids;

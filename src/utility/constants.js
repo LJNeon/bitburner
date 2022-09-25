@@ -9,6 +9,8 @@ export const IDS = {
 	G: 2,
 	H: 3
 };
+// Scripts to run by task ID.
+export const SCRIPTS_BY_ID = ["weaken.js", "weaken.js", "grow.js", "hack.js"];
 // Security cost/gain for one thread based on task.
 export const SEC_PER_THREAD = {
 	// Security gain for a weaken thread.

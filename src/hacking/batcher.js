@@ -1,14 +1,15 @@
 import {
 	IDS, SAFETY_THRESHOLD, HACK_LEVEL_RANGE, CHAIN_PORT,
-	SUCCESS_COLOR, FAILURE_COLOR, WARNING_COLOR, SAFETY_DELAY
+	SUCCESS_COLOR, FAILURE_COLOR, WARNING_COLOR, SAFETY_DELAY,
+	SCRIPTS_BY_ID
 } from "utility/constants.js";
-import {CheckPids, nFormat, Table} from "utility/generic.js";
+import {
+	CheckPids, nFormat, Table, DeleteLogLines
+} from "utility/generic.js";
 import {GetHackPercent} from "utility/metrics.js";
 import RunScript from "utility/run-script.js";
 import {CalcDelays} from "utility/stalefish.js";
 import {GetWeakThreads, GetGrowThreads, GetThreads} from "utility/threads.js";
-
-const scripts = ["weaken.js", "weaken.js", "grow.js", "hack.js"];
 
 class Scheduler {
 	constructor() {
@@ -37,22 +38,8 @@ class Scheduler {
 		return this.tasks.has(id);
 	}
 
-	Edit(id, edits) {
-		if(this.tasks.has(id)) {
-			Object.assign(this.tasks.get(id), edits);
-
-			return true;
-		}
-
-		return false;
-	}
-
 	Delete(id) {
 		return this.tasks.delete(id);
-	}
-
-	Clear() {
-		return this.tasks.clear();
 	}
 
 	Run(now) {
@@ -73,7 +60,6 @@ class Scheduler {
 class Batcher {
 	/** @param {import("../").NS} ns */
 	constructor(ns, server) {
-		this.createdAt = performance.now();
 		/** @type {import("../").NS} */
 		this.ns = ns;
 		this.server = server;
@@ -91,7 +77,7 @@ class Batcher {
 		this.restart = true;
 		this.ran = 0;
 		this.lastID = 0;
-		this.cancelled = 0;
+		this.cancels = [0, 0];
 		this.desynced = 0;
 		this.AdjustForLevel();
 	}
@@ -106,7 +92,10 @@ class Batcher {
 		this.scheduler.AdjustDelays(this.delays);
 	}
 
-	PrintStatus() {
+	PrintStatus(started) {
+		if(started)
+			DeleteLogLines(this.ns, 1);
+
 		if(this.stage === 0) {
 			const server = this.ns.getServer(this.server);
 			const sec = nFormat(server.hackDifficulty, "l", 2);
@@ -114,36 +103,32 @@ class Batcher {
 			const money = nFormat(server.moneyAvailable);
 			const moneyMax = nFormat(server.moneyMax);
 
-			this.ns.clearLog();
 			this.ns.print(`${WARNING_COLOR}[?] Preparing...${Table(
 				{Security: `${sec}/${minSec}`, Cash: `$${money}/$${moneyMax}`},
 				WARNING_COLOR
 			)}`);
 		}else if(this.stage === 1) {
-			const cancelledPct = nFormat(this.cancelled / this.ran * 100, "l", 2);
+			const cancelledPct = nFormat(this.cancels.reduce((a, b) => a + b) / this.ran * 100, "l", 2);
 			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
 
-			this.ns.clearLog();
 			this.ns.print(`${SUCCESS_COLOR}[-] Running...${Table({
 				"Batch Duration": this.ns.tFormat(this.period * this.depth),
 				"Max Depth": String(this.depth),
 				"Hack Percent": `${this.percent * 100}%`,
 				"Max Hacking Level": nFormat(this.levelMax, "l"),
-				"Cancelled Batches": `${nFormat(this.cancelled, "l")} (${cancelledPct}%)`,
+				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}d/${nFormat(this.cancels[1], "l")}p (${cancelledPct}%)`,
 				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
 			}, SUCCESS_COLOR)}`);
-		}else if(this.stage === 2) {
-			const cancelledPct = nFormat(this.cancelled / this.ran * 100, "l", 2);
+		}else{
+			const cancelledPct = nFormat(this.cancels.reduce((a, b) => a + b) / this.ran * 100, "l", 2);
 			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
 
-			this.ns.clearLog();
-			this.ns.print(`${FAILURE_COLOR}[!] Stopping...${Table({
+			this.ns.print(`${FAILURE_COLOR}[!] Stopp${this.batches.size === 0 ? "ed" : "ing"}...${Table({
 				"Remaining Batches": nFormat(this.batches.size, "l"),
-				"Cancelled Batches": `${nFormat(this.cancelled, "l")} (${cancelledPct}%)`,
+				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}d/${nFormat(this.cancels[1], "l")}p (${cancelledPct}%)`,
 				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
 			}, FAILURE_COLOR)}`);
 		}
-
 	}
 
 	StartPreparing() {
@@ -174,6 +159,7 @@ class Batcher {
 			return;
 		}
 
+		this.startedAt = performance.now();
 		this.stage = 1;
 		this.percent = pct;
 		this.period = period;
@@ -192,7 +178,24 @@ class Batcher {
 			this.StartPreparing();
 	}
 
-	CancelTask(id, which) {
+	CancelNextHack() {
+		for(const batch of this.batches.values()) {
+			if(batch.running.hasOwnProperty(IDS.H)) {
+				batch.running[IDS.H].pids.forEach(pid => this.ns.kill(pid));
+				delete batch.running[IDS.H];
+
+				if(!batch.partial) {
+					++this.cancels[1];
+					batch.partial = true;
+				}
+			}
+		}
+	}
+
+	CancelTask(id, which, unprepped) {
+		if(unprepped)
+			this.CancelNextHack();
+
 		const batch = this.batches.get(id);
 
 		if(which === IDS.W2)
@@ -201,7 +204,7 @@ class Batcher {
 		this.scheduler.Delete(batch.scheduled[IDS.H]);
 
 		if(!batch.partial) {
-			++this.cancelled;
+			++this.cancels[Number(unprepped)];
 			batch.partial = true;
 		}
 
@@ -217,17 +220,25 @@ class Batcher {
 
 			batch.scheduled[which] = this.scheduler.Schedule(which, now, this.delays[which], lateBy => {
 				const server = this.ns.getServer(this.server);
-				const unpreped = server.hackDifficulty !== server.minDifficulty || server.moneyAvailable !== server.moneyMax;
-				const spread = which === IDS.W1 || which === IDS.W2;
+				const unprepped = server.hackDifficulty !== server.minDifficulty || server.moneyAvailable !== server.moneyMax;
 
-				if((lateBy >= SAFETY_THRESHOLD || unpreped) && this.CancelTask(batchID, which))
+				if((lateBy >= SAFETY_THRESHOLD || unprepped) && this.CancelTask(batchID, which, unprepped))
 					return;
 
 				const id = this.GetID();
+				const pids = RunScript(
+					this.ns,
+					SCRIPTS_BY_ID[which],
+					this.server,
+					this.threads[which],
+					which === IDS.W1 || which === IDS.W2,
+					false,
+					id,
+					CHAIN_PORT
+				);
 
 				this.ids.set(id, batchID);
-				batch.running[id] = which;
-				RunScript(this.ns, scripts[which], this.server, this.threads[which], spread, false, id, CHAIN_PORT);
+				batch.running[id] = {which, pids};
 			});
 		}
 
@@ -240,10 +251,11 @@ class Batcher {
 			const id = this.port.read();
 			const batchID = this.ids.get(id);
 			const batch = this.batches.get(batchID);
-			const which = batch?.running[id];
 
 			if(batch == null)
 				continue;
+
+			const {which} = batch.running[id];
 
 			if(!batch.partial) {
 				if(which === IDS.H && Object.keys(batch.running).length !== 4)
@@ -263,7 +275,6 @@ class Batcher {
 		for(const [id, batch] of this.batches.entries()) {
 			if(batch.scheduled.every(s => !this.scheduler.Has(s)) && Object.keys(batch.running).length === 0)
 				this.batches.delete(id);
-
 		}
 	}
 
@@ -275,7 +286,7 @@ class Batcher {
 	Run() {
 		const now = performance.now();
 		const level = this.ns.getPlayer().skills.hacking;
-		const nextBatchAt = this.createdAt + (this.period * this.ran);
+		const nextBatchAt = this.startedAt + (this.period * this.ran);
 
 		if(level !== this.level) {
 			if(level > this.levelMax)
@@ -306,8 +317,6 @@ class Batcher {
 
 				break;
 		}
-
-		this.PrintStatus();
 	}
 
 	Stopped() {
@@ -332,14 +341,25 @@ export async function main(ns) {
 	}
 
 	let batcher = new Batcher(ns, target);
+	let started = false;
 
 	while(true) {
-		if(batcher.Stopped() && batcher.CanRestart()) {
+		if(batcher.Stopped()) {
+			if(!batcher.CanRestart())
+				break;
+
 			await ns.sleep(SAFETY_DELAY * 2);
+			batcher.PrintStatus(true);
 			batcher = new Batcher(ns, target);
+			started = false;
 		}
 
 		await batcher.Update();
+		batcher.PrintStatus(started);
+
+		if(!started)
+			started = true;
+
 		await ns.sleep(5);
 	}
 }

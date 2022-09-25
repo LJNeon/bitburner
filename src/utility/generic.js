@@ -91,3 +91,17 @@ export function Table(rows, color) {
 
 	return result;
 }
+/** @param {import("../").NS} ns */
+export function DeleteLogLines(ns, amount) {
+	const lines = ns.getScriptLogs();
+
+	ns.clearLog();
+
+	if(lines.length === 0 || amount >= lines.length)
+		return;
+
+	for(let i = 0; i < lines.length; i++) {
+		if(lines.length - amount > i)
+			ns.print(lines[i]);
+	}
+}

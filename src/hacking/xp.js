@@ -8,23 +8,25 @@ import {GetWeakThreads, GetGrowThreads} from "utility/threads.js";
 /** @param {import("../").NS} ns */
 async function Prepare(ns, target) {
 	let server;
+	let already = true;
 
 	while((server = ns.getServer(target)).hackDifficulty !== server.minDifficulty
 			|| server.moneyAvailable !== server.moneyMax) {
 		const {hackDifficulty, minDifficulty, moneyAvailable, moneyMax} = server;
 		const pids = [];
 
+		if(already)
+			already = false;
+
 		if(hackDifficulty !== minDifficulty) {
 			const threads = GetWeakThreads(hackDifficulty - minDifficulty);
 
-			ns.print(`${WARNING_COLOR}[!] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
+			ns.print(`${WARNING_COLOR}[?] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
 			pids.push(...RunScript(ns, "weaken.js", target, threads, true, true));
-		}
-
-		if(moneyAvailable !== moneyMax) {
+		}else if(moneyAvailable !== moneyMax) {
 			const threads = GetGrowThreads(ns, server, ns.getPlayer());
 
-			ns.print(`${WARNING_COLOR}[!] Cash at $${nFormat(moneyAvailable)}/$${nFormat(moneyMax)}`);
+			ns.print(`${WARNING_COLOR}[?] Cash at $${nFormat(moneyAvailable)}/$${nFormat(moneyMax)}`);
 			pids.push(...RunScript(ns, "grow.js", target, threads, false, true));
 		}
 
@@ -34,7 +36,8 @@ async function Prepare(ns, target) {
 		await SleepPids(ns, pids);
 	}
 
-	ns.print(`${SUCCESS_COLOR}[-] Server prepared.`);
+	if(!already)
+		ns.print(`${SUCCESS_COLOR}[-] Server prepared.`);
 }
 
 /** @param {import("../").NS} ns */
