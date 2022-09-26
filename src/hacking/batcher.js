@@ -258,13 +258,10 @@ class Batcher {
 			const {which} = batch.running[id];
 
 			if(!batch.partial) {
-				if(which === IDS.H && Object.keys(batch.running).length !== 4)
-					++this.desynced;
-				else if(which === IDS.W1 && Object.keys(batch.running).length !== 3)
-					++this.desynced;
-				else if(which === IDS.G && Object.keys(batch.running).length !== 2)
-					++this.desynced;
-				else if(which === IDS.W2 && Object.keys(batch.running).length !== 1)
+				if((which === IDS.H && Object.keys(batch.running).length !== 4)
+						|| (which === IDS.W1 && Object.keys(batch.running).length !== 3)
+						|| (which === IDS.G && Object.keys(batch.running).length !== 2)
+						|| (which === IDS.W2 && Object.keys(batch.running).length !== 1))
 					++this.desynced;
 			}
 

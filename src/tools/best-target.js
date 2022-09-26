@@ -1,17 +1,18 @@
 import {TAIL_COLORS, DEFAULT_COLOR} from "utility/constants.js";
 import {ScanAll} from "utility/generic.js";
-import {GetHackPercent} from "utility/metrics.js";
+import {GetHackPercent, BestXPServer} from "utility/metrics.js";
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
 
 	const targets = await FindBestServer(ns, 5);
+	let message = `\n${TAIL_COLORS[3]}Best Server for XP: ${DEFAULT_COLOR}${BestXPServer(ns)}`;
+
+	message += `\n${TAIL_COLORS[4]}Best Servers to Hack:`;
 
 	if(targets.length === 0)
-		return ns.tprint(`${DEFAULT_COLOR}Oops! No valid servers to hack found.`);
-
-	let message = `${TAIL_COLORS[4]}Best Servers to Hack:`;
+		return ns.tprint(`${message}\n${DEFAULT_COLOR}No hackable servers found.`);
 
 	for(let i = 0; i < targets.length; i++) {
 		message += `\n${TAIL_COLORS[4]}${i + 1}. ${DEFAULT_COLOR}${targets[i].target}`;

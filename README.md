@@ -1,12 +1,12 @@
 # LJ's Bitburner Scripts
 
-## hacking/chain.js
+## hacking/batcher.js
 
-A HWGW JIT chain batcher with clock-sync and stalefish delays.
+A HWGW non-sequential JIT batcher with clock-sync and stalefish delays.
 
 ## hacking/simple.js
 
-A basic sequential script that uses as much RAM as needed even if it's inefficient.
+A manager script with rudimentary weaken and grow calculations.
 
 ## hacking/xp.js
 
@@ -31,3 +31,12 @@ A script that gains root access to every possible server depending on programs o
 ## tools/update-share.js
 
 A script that shares on personal servers again as necessary, usually useful after you're forced to reload and kill all scripts.
+
+# TODO!
+
+ * Fix hacking/batcher.js sometimes failing to notice batches finished when available RAM is low.
+ * Improve utility/ram.js to properly reserve space for share.js on personal servers.
+ * Change metrics to calculate based off of maximum free RAM, not current free RAM.
+ * Improve hacking/xp.js to automatically choose a target using `BestXPServer()`.
+ * Merge threads.js into metrics.js as "metrics" covers thread-related math.
+ * Remove unused methods and constants.

@@ -17,6 +17,10 @@ export function CalcPeriodDepth(ns, target, sizeLimit) {
 	const minGrowT = ns.formulas.hacking.growTime(server, player);
 	const minHackT = ns.formulas.hacking.hackTime(server, player);
 	const safeLimit = Math.floor(minWeakT / (SAFETY_DELAY * 4) / 2);
+
+	if(safeLimit === 0)
+		return;
+
 	let period;
 	let depth;
 	// Let the witchcraft begin!

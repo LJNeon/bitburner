@@ -31,11 +31,11 @@ export async function main(ns) {
 			const threads = GetGrowThreads(ns, server, player);
 			const pids = RunScript(ns, "grow.js", target, threads, true, true);
 
-			ns.print(`${WARNING_COLOR}[?] Weakening "${target}"...`);
+			ns.print(`${WARNING_COLOR}[?] Growing "${target}"...`);
 			await SleepPids(ns, pids);
 		}else{
 			const threads = GetHackThreads(ns, server, player, pct);
-			const pids = RunScript(ns, "grow.js", target, threads, true, true);
+			const pids = RunScript(ns, "hack.js", target, threads, true, true);
 
 			ns.print(`${SUCCESS_COLOR}[!] Hacking "${target}" for ${Math.floor(pct * 100)}%...`);
 			await SleepPids(ns, pids);

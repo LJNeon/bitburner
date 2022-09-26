@@ -22,15 +22,22 @@ export async function GetHackPercent(ns, target) {
 			break;
 
 		const server = ns.getServer(target);
+
+		server.hackDifficulty = server.minDifficulty;
+
 		const chance = ns.formulas.hacking.hackChance(server, ns.getPlayer());
-		const {period: p, depth: d} = CalcPeriodDepth(ns, target, sizeLimit);
-		const nextProfit = server.moneyMax * hackPct * chance * d / (p * d / 1e3);
+		const sf = CalcPeriodDepth(ns, target, sizeLimit);
+
+		if(sf == null)
+			break;
+
+		const nextProfit = server.moneyMax * hackPct * chance * sf.depth / (sf.period * sf.depth / 1e3);
 
 		if(nextProfit > profit) {
 			pct = hackPct;
 			profit = nextProfit;
-			period = p;
-			depth = d;
+			period = sf.period;
+			depth = sf.depth;
 		}else{
 			break;
 		}
@@ -45,4 +52,24 @@ export async function GetHackPercent(ns, target) {
 		period,
 		depth
 	};
+}
+/** @param {import("../").NS} ns */
+export function BestXPServer(ns) {
+	const servers = ScanAll(ns).map(n => ns.getServer(n));
+	const player = ns.getPlayer();
+	let best;
+	let score;
+
+	for(const server of servers) {
+		server.hackDifficulty = server.minDifficulty;
+
+		const nextScore = ns.formulas.hacking.hackExp(server, player) / ns.formulas.hacking.growTime(server, player);
+
+		if(score == null || nextScore > score) {
+			best = server.hostname;
+			score = nextScore;
+		}
+	}
+
+	return best;
 }
