@@ -1,4 +1,4 @@
-import {MIN_HOME_RAM} from "utility/constants.js";
+import {MIN_HOME_RAM, PERSONAL_SERVER_SHARE} from "utility/constants.js";
 import {ScanAll} from "utility/generic.js";
 
 export default class RAM {
@@ -19,7 +19,10 @@ export default class RAM {
 
 			const used = simulateMax ? 0 : server.ramUsed;
 			const free = server.maxRam - used;
-			const reserved = server.hostname === "home" ? MIN_HOME_RAM : 0;
+			let reserved = server.hostname === "home" ? MIN_HOME_RAM : 0;
+
+			if(server.purchasedByPlayer && (simulateMax || ns.getRunningScript("share.js", server.hostname) == null))
+				reserved += server.maxRam * PERSONAL_SERVER_SHARE;
 
 			this.used += used;
 			this.free += free;

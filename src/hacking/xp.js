@@ -1,9 +1,10 @@
 import {
-	SAFETY_DELAY, FAILURE_COLOR, WARNING_COLOR, SUCCESS_COLOR
+	SAFETY_DELAY, FAILURE_COLOR, WARNING_COLOR, SUCCESS_COLOR,
+	DEFAULT_COLOR
 } from "utility/constants.js";
 import {SleepPids, nFormat} from "utility/generic.js";
 import RunScript from "utility/run-script.js";
-import {GetWeakThreads, GetGrowThreads} from "utility/threads.js";
+import {GetWeakThreads, GetGrowThreads, BestXPServer} from "utility/metrics.js";
 
 /** @param {import("../").NS} ns */
 async function Prepare(ns, target) {
@@ -44,13 +45,10 @@ async function Prepare(ns, target) {
 export async function main(ns) {
 	ns.disableLog("ALL");
 
-	const target = ns.args[0];
+	const target = BestXPServer(ns);
 
-	try {
-		ns.getServer(target);
-	}catch{
-		return ns.tprint(`Server "${target}" doesn't exist.`);
-	}
+	if(target == null)
+		return ns.tprint(`${DEFAULT_COLOR}No hackable servers found.`);
 
 	while(true) {
 		await Prepare(ns, target);

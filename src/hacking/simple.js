@@ -2,8 +2,8 @@ import {
 	MONEY_PER_HACK, FAILURE_COLOR, WARNING_COLOR, SUCCESS_COLOR
 } from "utility/constants.js";
 import {SleepPids} from "utility/generic.js";
+import {GetWeakThreads, GetGrowThreads, GetHackThreads} from "utility/metrics.js";
 import RunScript from "utility/run-script.js";
-import {GetWeakThreads, GetGrowThreads, GetHackThreads} from "utility/threads.js";
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {

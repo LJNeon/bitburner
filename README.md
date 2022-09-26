@@ -35,8 +35,5 @@ A script that shares on personal servers again as necessary, usually useful afte
 # TODO!
 
  * Fix hacking/batcher.js sometimes failing to notice batches finished when available RAM is low.
- * Improve utility/ram.js to properly reserve space for share.js on personal servers.
- * Change metrics to calculate based off of maximum free RAM, not current free RAM.
  * Improve hacking/xp.js to automatically choose a target using `BestXPServer()`.
- * Merge threads.js into metrics.js as "metrics" covers thread-related math.
  * Remove unused methods and constants.

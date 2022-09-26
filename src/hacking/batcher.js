@@ -6,10 +6,11 @@ import {
 import {
 	CheckPids, nFormat, Table, DeleteLogLines
 } from "utility/generic.js";
-import {GetHackPercent} from "utility/metrics.js";
+import {
+	GetWeakThreads, GetGrowThreads, GetThreads, GetHackPercent
+} from "utility/metrics.js";
 import RunScript from "utility/run-script.js";
 import {CalcDelays} from "utility/stalefish.js";
-import {GetWeakThreads, GetGrowThreads, GetThreads} from "utility/threads.js";
 
 class Scheduler {
 	constructor() {
