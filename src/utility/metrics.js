@@ -111,7 +111,7 @@ export async function GetHackPercent(ns, target) {
 		if(sf == null)
 			break;
 
-		const nextProfit = server.moneyMax * hackPct * chance * sf.depth / (sf.period * sf.depth / 1e3);
+		const nextProfit = server.moneyMax * chance * hackPct * sf.depth / (sf.period * sf.depth / 1e3);
 
 		if(nextProfit > profit) {
 			pct = hackPct;

@@ -35,5 +35,5 @@ A script that shares on personal servers again as necessary, usually useful afte
 # TODO!
 
  * Fix hacking/batcher.js sometimes failing to notice batches finished when available RAM is low.
- * Improve hacking/xp.js to automatically choose a target using `BestXPServer()`.
+ * Improve hacking/batcher.js logging to only re-print when something has changed instead of every tick.
  * Remove unused methods and constants.

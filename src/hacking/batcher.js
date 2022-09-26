@@ -120,15 +120,36 @@ class Batcher {
 				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}d/${nFormat(this.cancels[1], "l")}p (${cancelledPct}%)`,
 				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
 			}, SUCCESS_COLOR)}`);
+		}else if(this.Stopped()) {
+			const cancelledPct = nFormat(this.cancels.reduce((a, b) => a + b) / this.ran * 100, "l", 2);
+			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
+
+			this.ns.print(`${FAILURE_COLOR}[!] Stopped...${Table({
+				"Batches Ran": nFormat(this.ran, "l"),
+				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}d/${nFormat(this.cancels[1], "l")}p (${cancelledPct}%)`,
+				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
+			}, FAILURE_COLOR)}`);
 		}else{
 			const cancelledPct = nFormat(this.cancels.reduce((a, b) => a + b) / this.ran * 100, "l", 2);
 			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
 
-			this.ns.print(`${FAILURE_COLOR}[!] Stopp${this.batches.size === 0 ? "ed" : "ing"}...${Table({
+			this.ns.print(`${FAILURE_COLOR}[!] Stopping...${Table({
 				"Remaining Batches": nFormat(this.batches.size, "l"),
 				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}d/${nFormat(this.cancels[1], "l")}p (${cancelledPct}%)`,
 				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
 			}, FAILURE_COLOR)}`);
+		}
+	}
+
+	Stop() {
+		this.stage = 2;
+
+		for(const [id, batch] of this.batches.entries()) {
+			if(batch.running[IDS.H] == null) {
+				batch.scheduled.forEach(s => this.scheduler.Delete(s));
+				Object.values(batch.running).forEach(r => r.pids.forEach(pid => this.ns.kill(pid)));
+				this.batches.delete(id);
+			}
 		}
 	}
 
@@ -154,7 +175,7 @@ class Batcher {
 
 		if(pct === 0) {
 			this.restart = false;
-			this.stage = 2;
+			this.Stop();
 			this.ns.print(`${FAILURE_COLOR}Not enough free RAM, exiting...`);
 
 			return;
@@ -288,7 +309,7 @@ class Batcher {
 
 		if(level !== this.level) {
 			if(level > this.levelMax)
-				return this.stage = 2;
+				return this.Stop();
 
 			this.level = level;
 			this.AdjustForLevel();

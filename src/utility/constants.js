@@ -20,11 +20,6 @@ export const SEC_PER_THREAD = {
 	// Security cost for a hack thread.
 	HACK: 0.002
 };
-// Ratios of function durations in comparison to hack().
-export const TIME_RATIOS = {
-	WEAKEN: 4,
-	GROW: 3.2
-};
 // Percentange of extra threads to add to weaken.js and grow.js to lessen desyncs.
 export const WEAKEN_GROW_EXTRA = 1.1;
 // GBs of home server RAM to consider unusable by scripts.
