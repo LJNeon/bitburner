@@ -79,7 +79,7 @@ class Batcher {
 		this.ran = 0;
 		this.lastID = 0;
 		this.cancels = [0, 0];
-		this.desynced = 0;
+		this.desyncs = 0;
 		this.AdjustForLevel();
 	}
 
@@ -110,33 +110,33 @@ class Batcher {
 			)}`);
 		}else if(this.stage === 1) {
 			const cancelledPct = nFormat(this.cancels.reduce((a, b) => a + b) / this.ran * 100, "l", 2);
-			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
+			const desyncedPct = nFormat(this.desyncs / this.lastID * 100, "l", 2);
 
 			this.ns.print(`${SUCCESS_COLOR}[-] Running...${Table({
 				"Batch Duration": this.ns.tFormat(this.period * this.depth),
 				"Max Depth": String(this.depth),
 				"Hack Percent": `${this.percent * 100}%`,
 				"Max Hacking Level": nFormat(this.levelMax, "l"),
-				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}d/${nFormat(this.cancels[1], "l")}p (${cancelledPct}%)`,
-				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
+				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}/${nFormat(this.cancels[1], "l")} (${cancelledPct}%)`,
+				"Desynced Tasks": `${nFormat(this.desyncs, "l")} (${desyncedPct}%)`
 			}, SUCCESS_COLOR)}`);
 		}else if(this.Stopped()) {
 			const cancelledPct = nFormat(this.cancels.reduce((a, b) => a + b) / this.ran * 100, "l", 2);
-			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
+			const desyncedPct = nFormat(this.desyncs / this.lastID * 100, "l", 2);
 
 			this.ns.print(`${FAILURE_COLOR}[!] Stopped...${Table({
 				"Batches Ran": nFormat(this.ran, "l"),
-				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}d/${nFormat(this.cancels[1], "l")}p (${cancelledPct}%)`,
-				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
+				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}/${nFormat(this.cancels[1], "l")} (${cancelledPct}%)`,
+				"Desynced Tasks": `${nFormat(this.desyncs, "l")} (${desyncedPct}%)`
 			}, FAILURE_COLOR)}`);
 		}else{
 			const cancelledPct = nFormat(this.cancels.reduce((a, b) => a + b) / this.ran * 100, "l", 2);
-			const desyncedPct = nFormat(this.desynced / this.lastID * 100, "l", 2);
+			const desyncedPct = nFormat(this.desyncs / this.lastID * 100, "l", 2);
 
 			this.ns.print(`${FAILURE_COLOR}[!] Stopping...${Table({
 				"Remaining Batches": nFormat(this.batches.size, "l"),
-				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}d/${nFormat(this.cancels[1], "l")}p (${cancelledPct}%)`,
-				"Desynced Tasks": `${nFormat(this.desynced, "l")} (${desyncedPct}%)`
+				"Cancelled Batches": `${nFormat(this.cancels[0], "l")}/${nFormat(this.cancels[1], "l")} (${cancelledPct}%)`,
+				"Desynced Tasks": `${nFormat(this.desyncs, "l")} (${desyncedPct}%)`
 			}, FAILURE_COLOR)}`);
 		}
 	}
@@ -230,7 +230,7 @@ class Batcher {
 			batch.partial = true;
 		}
 
-		return which !== IDS.W1 && which !== IDS.W2;
+		return unprepped || (which !== IDS.W1 && which !== IDS.W2);
 	}
 
 	StartBatch(now) {
@@ -284,7 +284,7 @@ class Batcher {
 						|| (which === IDS.W1 && Object.keys(batch.running).length !== 3)
 						|| (which === IDS.G && Object.keys(batch.running).length !== 2)
 						|| (which === IDS.W2 && Object.keys(batch.running).length !== 1))
-					++this.desynced;
+					++this.desyncs;
 			}
 
 			delete batch.running[id];
