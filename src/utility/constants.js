@@ -9,11 +9,11 @@ export const IDS = {
 	G: 2,
 	H: 3
 };
-//
+// Scripts to copy to every server.
 export const TASK_SCRIPTS = ["weaken.js", "grow.js", "hack.js"];
 // Scripts to run by task ID.
 export const SCRIPTS_BY_ID = ["weaken.js", "weaken.js", "grow.js", "hack.js"];
-//
+// Programs that can open a port.
 export const PORT_PROGRAMS = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"];
 // Security cost/gain for one thread based on task.
 export const SEC_PER_THREAD = {
@@ -62,7 +62,7 @@ export const TAIL_COLORS = [
 ];
 // Abbreviations to use when formatting normal numbers.
 export const NORM_ABBRS = [
-	"", "k", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc",
+	"", "k", "m", "b", "t", "q", "Q", "s", "S", "o", "n", "d",
 	"Ud", "Dd", "Td", "QaD", "QiD", "SxD", "SpD", "OcD", "NoD", "Vg"
 ];
 // Abbreviations to use when formatting an amount of bytes.

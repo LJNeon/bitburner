@@ -60,19 +60,20 @@ class Scheduler {
 
 class Batcher {
 	/** @param {import("../").NS} ns */
-	constructor(ns, server) {
+	constructor(ns, server, debug) {
 		/** @type {import("../").NS} */
 		this.ns = ns;
 		this.server = server;
+		this.debug = debug;
 		this.port = ns.getPortHandle(CHAIN_PORT);
 		this.port.clear();
-		this.scheduler = new Scheduler();
+		this.scheduler = new Scheduler(this);
 		this.batches = new Map();
 		this.ids = new Map();
 		/*.
 		 * 0 = preparing
 		 * 1 = running
-		 * 2 = stopping/stopped
+		 * 2 = stopping
 		.*/
 		this.stage = 0;
 		this.restart = true;
@@ -91,6 +92,18 @@ class Batcher {
 		this.threads = GetThreads(this.ns, this.server, this.percent);
 		this.delays = CalcDelays(this.ns, this.server, this.period, this.depth);
 		this.scheduler.AdjustDelays(this.delays);
+	}
+
+	WriteDebug(info) {
+		if(!this.debug)
+			return;
+
+		const name = `debug-${Math.floor(this.startedAt)}.txt`;
+
+		if(this.ns.fileExists(name))
+			this.ns.write(name, `\n${JSON.stringify(info)}`, "a");
+		else
+			this.ns.write(name, JSON.stringify(info), "w");
 	}
 
 	PrintStatus(started) {
@@ -141,18 +154,6 @@ class Batcher {
 		}
 	}
 
-	Stop() {
-		this.stage = 2;
-
-		for(const [id, batch] of this.batches.entries()) {
-			if(batch.running[IDS.H] == null) {
-				batch.scheduled.forEach(s => this.scheduler.Delete(s));
-				Object.values(batch.running).forEach(r => r.pids.forEach(pid => this.ns.kill(pid)));
-				this.batches.delete(id);
-			}
-		}
-	}
-
 	StartPreparing() {
 		const server = this.ns.getServer(this.server);
 		const pids = [];
@@ -168,6 +169,23 @@ class Batcher {
 		}
 
 		this.preparing = pids;
+	}
+
+	Stop() {
+		this.stage = 2;
+
+		for(const [id, batch] of Array.from(this.batches.entries())) {
+			if(!batch.running.hasOwnProperty(IDS.H)) {
+				for(let i = IDS.W1; i <= IDS.H; i++) {
+					if(this.scheduler.Delete(batch.scheduled[i]))
+						this.WriteDebug({type: "cancelled", batchID: id, which: i});
+					else if(batch.running[i] != null && batch.running[i].pids.map(p => this.ns.kill(p)).includes(true))
+						this.WriteDebug({type: "killed", batchID: id, which: i});
+				}
+
+				this.batches.delete(id);
+			}
+		}
 	}
 
 	async FinishPreparing() {
@@ -201,15 +219,17 @@ class Batcher {
 	}
 
 	CancelNextHack() {
-		for(const batch of this.batches.values()) {
+		for(const [id, batch] of this.batches.entries()) {
 			if(batch.running.hasOwnProperty(IDS.H)) {
-				batch.running[IDS.H].pids.forEach(pid => this.ns.kill(pid));
-				delete batch.running[IDS.H];
-
 				if(!batch.partial) {
 					++this.cancels[1];
 					batch.partial = true;
 				}
+
+				if(batch.running[IDS.H].pids.map(pid => this.ns.kill(pid)).includes(true))
+					this.WriteDebug({type: "killed", batchID: id, which: IDS.H});
+
+				delete batch.running[IDS.H];
 			}
 		}
 	}
@@ -219,18 +239,23 @@ class Batcher {
 			this.CancelNextHack();
 
 		const batch = this.batches.get(id);
-
-		if(which === IDS.W2)
-			this.scheduler.Delete(batch.scheduled[IDS.G]);
-
-		this.scheduler.Delete(batch.scheduled[IDS.H]);
+		const shouldCancel = unprepped || (which !== IDS.W1 && which !== IDS.W2);
 
 		if(!batch.partial) {
 			++this.cancels[Number(unprepped)];
 			batch.partial = true;
 		}
 
-		return unprepped || (which !== IDS.W1 && which !== IDS.W2);
+		if(which === IDS.W2 && this.scheduler.Delete(batch.scheduled[IDS.G]))
+			this.WriteDebug({type: "cancelled", batchID: id, which: IDS.G});
+
+		if(this.scheduler.Delete(batch.scheduled[IDS.H]))
+			this.WriteDebug({type: "cancelled", batchID: id, which: IDS.H});
+
+		if(shouldCancel)
+			this.WriteDebug({type: "cancelled", batchID: id, which});
+
+		return shouldCancel;
 	}
 
 	StartBatch(now) {
@@ -261,7 +286,9 @@ class Batcher {
 
 				this.ids.set(id, batchID);
 				batch.running[id] = {which, pids};
+				this.WriteDebug({type: "ran", batchID, which});
 			});
+			this.WriteDebug({type: "scheduled", batchID, which});
 		}
 
 		this.batches.set(batchID, batch);
@@ -283,15 +310,18 @@ class Batcher {
 				if((which === IDS.H && Object.keys(batch.running).length !== 4)
 						|| (which === IDS.W1 && Object.keys(batch.running).length !== 3)
 						|| (which === IDS.G && Object.keys(batch.running).length !== 2)
-						|| (which === IDS.W2 && Object.keys(batch.running).length !== 1))
+						|| (which === IDS.W2 && Object.keys(batch.running).length !== 1)) {
 					++this.desyncs;
+					this.WriteDebug({type: "desynced", batchID, which});
+				}
 			}
 
 			delete batch.running[id];
 			this.ids.delete(id);
+			this.WriteDebug({type: "finished", batchID, which});
 		}
 
-		for(const [id, batch] of this.batches.entries()) {
+		for(const [id, batch] of Array.from(this.batches.entries())) {
 			if(batch.scheduled.every(s => !this.scheduler.Has(s)) && Object.keys(batch.running).length === 0)
 				this.batches.delete(id);
 		}
@@ -351,15 +381,19 @@ class Batcher {
 export async function main(ns) {
 	ns.disableLog("ALL");
 
-	const target = ns.args[0];
+	const [target, debug = false] = ns.args;
+	let server;
 
 	try {
-		ns.getServer(target);
+		server = ns.getServer(target);
 	}catch{
 		return ns.tprint(`${FAILURE_COLOR}Server "${target}" doesn't exist.`);
 	}
 
-	let batcher = new Batcher(ns, target);
+	if(!server.hasAdminRights)
+		return ns.tprint(`${FAILURE_COLOR}Missing root access for "${target}".`);
+
+	let batcher = new Batcher(ns, target, debug);
 	let started = false;
 
 	while(true) {
@@ -369,7 +403,7 @@ export async function main(ns) {
 
 			await ns.sleep(SAFETY_DELAY * 2);
 			batcher.PrintStatus(true);
-			batcher = new Batcher(ns, target);
+			batcher = new Batcher(ns, target, debug);
 			started = false;
 		}
 

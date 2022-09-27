@@ -1,4 +1,4 @@
-import {PERSONAL_SERVER_SHARE} from "utility/constants.js";
+import {TASK_SCRIPTS, PERSONAL_SERVER_SHARE} from "utility/constants.js";
 import {GenID, ScanAll} from "utility/generic.js";
 
 const MONEY_LIMIT = 0.4;
@@ -20,7 +20,7 @@ async function BuyServer(ns, id, ram, upgraded = false) {
 	const shareRam = ns.getScriptRam("share.js");
 
 	ns.purchaseServer(name, ram);
-	await ns.scp(["weaken.js", "grow.js", "hack.js", "share.js"], name);
+	await ns.scp(["share.js", ...TASK_SCRIPTS], name);
 	ns.exec("share.js", name, Math.floor(ram / shareRam * PERSONAL_SERVER_SHARE));
 	ns.print(`${upgraded ? "Upgraded" : "Purchased"} server ${id} with ${displayRam} RAM.`);
 }
