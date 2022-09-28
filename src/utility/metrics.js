@@ -116,10 +116,7 @@ export async function GetHackPercent(ns, target) {
 		if(nextProfit > profit) {
 			pct = hackPct;
 			profit = nextProfit;
-			period = sf.period;
-			depth = sf.depth;
-		}else{
-			break;
+			({period, depth} = sf);
 		}
 
 		await ns.sleep(5);
