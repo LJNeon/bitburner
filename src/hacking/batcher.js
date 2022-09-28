@@ -174,16 +174,19 @@ class Batcher {
 	Stop() {
 		this.stage = 2;
 
-		for(const [id, batch] of Array.from(this.batches.entries())) {
+		for(const [batchID, batch] of Array.from(this.batches.entries())) {
 			if(!batch.running.hasOwnProperty(IDS.H)) {
 				for(let i = IDS.W1; i <= IDS.H; i++) {
 					if(this.scheduler.Delete(batch.scheduled[i]))
-						this.WriteDebug({type: "cancelled", batchID: id, which: i});
-					else if(batch.running[i] != null && batch.running[i].pids.map(p => this.ns.kill(p)).includes(true))
-						this.WriteDebug({type: "killed", batchID: id, which: i});
+						this.WriteDebug({type: "cancelled", batchID, which: i});
 				}
 
-				this.batches.delete(id);
+				for(const task of Object.values(batch.running)) {
+					if(task.pids.map(p => this.ns.kill(p)).includes(true))
+						this.WriteDebug({type: "killed", batchID, which: task.which});
+				}
+
+				this.batches.delete(batchID);
 			}
 		}
 	}
@@ -219,17 +222,19 @@ class Batcher {
 	}
 
 	CancelNextHack() {
-		for(const [id, batch] of this.batches.entries()) {
-			if(batch.running.hasOwnProperty(IDS.H)) {
+		for(const [batchID, batch] of this.batches.entries()) {
+			const id = Object.keys(batch.running).find(k => batch.running[k].which === IDS.H);
+
+			if(id != null) {
 				if(!batch.partial) {
 					++this.cancels[1];
 					batch.partial = true;
 				}
 
-				if(batch.running[IDS.H].pids.map(pid => this.ns.kill(pid)).includes(true))
-					this.WriteDebug({type: "killed", batchID: id, which: IDS.H});
+				if(batch.running[id].pids.map(pid => this.ns.kill(pid)).includes(true))
+					this.WriteDebug({type: "killed", batchID, which: IDS.H});
 
-				delete batch.running[IDS.H];
+				delete batch.running[id];
 			}
 		}
 	}
