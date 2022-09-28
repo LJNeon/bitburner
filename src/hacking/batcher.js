@@ -178,7 +178,7 @@ class Batcher {
 		this.stage = 2;
 
 		for(const [batchID, batch] of Array.from(this.batches.entries())) {
-			if(!batch.running.hasOwnProperty(IDS.H)) {
+			if(Object.values(batch.running).find(r => r.which === IDS.H) == null) {
 				for(let i = IDS.W1; i <= IDS.H; i++) {
 					if(this.scheduler.Delete(batch.scheduled[i]))
 						this.WriteDebug({type: "cancelled", batchID, which: i});

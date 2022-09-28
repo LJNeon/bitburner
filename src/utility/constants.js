@@ -37,7 +37,7 @@ export const SAFETY_DELAY = 100;
 // Time in milliseconds where a batch task is "too late", causing the hack and sometimes grow to be cancelled.
 export const SAFETY_THRESHOLD = 50;
 // Range in hacking skill levels that should be handled before the batcher needs to restart.
-export const HACK_LEVEL_RANGE = 20;
+export const HACK_LEVEL_RANGE = 15;
 // GBs of total RAM across all accessible servers where spreading threads should be disabled.
 export const SPREAD_THRESHOLD = 10_000;
 // Viable percents of a server's total money to hack in a single pass.
