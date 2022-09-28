@@ -14,7 +14,7 @@ A script that fills up all available RAM with grow calls for maximum XP/sec.
 
 ## tools/best-target.js
 
-A script that determines the most profitable servers to hack.
+A script that determines the most profitable servers to hack and the best server to spam for XP.
 
 ## tools/buy-server.js
 
@@ -35,5 +35,6 @@ A script that shares on personal servers again as necessary, usually useful afte
 # TODO!
 
  * Fix hacking/batcher.js sometimes failing to notice batches finished when available RAM is low.
+ * Fix hacking/batcher.js failing to detect when a task is killed by another script.
  * Improve hacking/batcher.js logging to only re-print when something has changed instead of every tick.
  * Remove unused methods and constants.

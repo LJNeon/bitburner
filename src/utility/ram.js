@@ -19,9 +19,11 @@ export default class RAM {
 
 			const used = simulateMax ? 0 : server.ramUsed;
 			const free = server.maxRam - used;
-			let reserved = server.hostname === "home" ? MIN_HOME_RAM : 0;
+			let reserved = 0;
 
-			if(server.purchasedByPlayer && (simulateMax || ns.getRunningScript("share.js", server.hostname) == null))
+			if(server.hostname === "home")
+				reserved += MIN_HOME_RAM;
+			else if(server.purchasedByPlayer && (simulateMax || ns.getRunningScript("share.js", server.hostname) == null))
 				reserved += server.maxRam * PERSONAL_SERVER_SHARE;
 
 			this.used += used;

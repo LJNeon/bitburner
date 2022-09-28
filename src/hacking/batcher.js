@@ -77,6 +77,7 @@ class Batcher {
 		.*/
 		this.stage = 0;
 		this.restart = true;
+		this.firstPrint = true;
 		this.ran = 0;
 		this.lastID = 0;
 		this.cancels = [0, 0];
@@ -106,8 +107,10 @@ class Batcher {
 			this.ns.write(name, JSON.stringify(info), "w");
 	}
 
-	PrintStatus(started) {
-		if(started)
+	PrintStatus() {
+		if(this.firstPrint)
+			this.firstPrint = false;
+		else
 			DeleteLogLines(this.ns, 1);
 
 		if(this.stage === 0) {
@@ -399,7 +402,6 @@ export async function main(ns) {
 		return ns.tprint(`${FAILURE_COLOR}Missing root access for "${target}".`);
 
 	let batcher = new Batcher(ns, target, debug);
-	let started = false;
 
 	while(true) {
 		if(batcher.Stopped()) {
@@ -407,17 +409,12 @@ export async function main(ns) {
 				break;
 
 			await ns.sleep(SAFETY_DELAY * 2);
-			batcher.PrintStatus(true);
+			batcher.PrintStatus();
 			batcher = new Batcher(ns, target, debug);
-			started = false;
 		}
 
 		await batcher.Update();
-		batcher.PrintStatus(started);
-
-		if(!started)
-			started = true;
-
+		batcher.PrintStatus();
 		await ns.sleep(5);
 	}
 }
