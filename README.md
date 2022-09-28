@@ -37,4 +37,5 @@ A script that shares on personal servers again as necessary, usually useful afte
  * Fix hacking/batcher.js sometimes failing to notice batches finished when available RAM is low.
  * Fix hacking/batcher.js failing to detect when a task is killed by another script.
  * Improve hacking/batcher.js logging to only re-print when something has changed instead of every tick.
+ * Move over RunScript calculations to metrics to allow for more precise batch simulation.
  * Remove unused methods and constants.

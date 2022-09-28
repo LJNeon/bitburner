@@ -1,7 +1,4 @@
-import {DEFAULT_COLOR} from "utility/constants.js";
-import {ScanAll, nFormat} from "utility/generic.js";
-
-function RLECompress(data) {
+export function RLECompress(data) {
 	const chars = Array.from(data);
 	let answer = "";
 	let current = undefined;
@@ -38,8 +35,7 @@ function RLECompress(data) {
 
 	return answer;
 }
-
-function LZDecompress(data) {
+export function LZDecompress(data) {
 	const compr = data;
 	let plain = "";
 
@@ -79,8 +75,7 @@ function LZDecompress(data) {
 
 	return plain;
 }
-
-function SetLZ(state, i, j, str) {
+export function SetLZ(state, i, j, str) {
 	const current = state[i][j];
 
 	if(current == null || str.length < current.length)
@@ -88,8 +83,7 @@ function SetLZ(state, i, j, str) {
 	else if(str.length === current.length && Math.random() < 0.5)
 		state[i][j] = str;
 }
-
-function LZCompress(data) {
+export function LZCompress(data) {
 	const plain = data;
 	let cur_state = Array.from(Array(10), () => Array(10).fill(null));
 	let new_state = Array.from(Array(10), () => Array(10));
@@ -187,16 +181,14 @@ function LZCompress(data) {
 
 	return result ?? "";
 }
-
-function CaesarCipher(data) {
+export function CaesarCipher(data) {
 	const cipher = [...data[0]]
 		.map((a) => a === " " ? a : String.fromCharCode(((a.charCodeAt(0) - 65 - data[1] + 26) % 26) + 65))
 		.join("");
 
 	return cipher;
 }
-
-function VigenereCipher(data) {
+export function VigenereCipher(data) {
 	const [plaintext, keyword] = data;
 
 	return plaintext
@@ -209,8 +201,7 @@ function VigenereCipher(data) {
 		})
 		.join("");
 }
-
-function JumpingGameI(data) {
+export function JumpingGameI(data) {
 	if(data[0] === 0)
 		return "0";
 
@@ -225,8 +216,7 @@ function JumpingGameI(data) {
 
 	return Number(Boolean(jumps[data.length - 1]));
 }
-
-function JumpingGameII(data) {
+export function JumpingGameII(data) {
 	const n = data.length;
 	let reach = 0;
 	let jumps = 0;
@@ -254,8 +244,7 @@ function JumpingGameII(data) {
 
 	return jumps;
 }
-
-function IsValidIPSegment(segment) {
+export function IsValidIPSegment(segment) {
 	if(segment[0] === "0" && segment !== "0")
 		return false;
 
@@ -263,8 +252,7 @@ function IsValidIPSegment(segment) {
 
 	return num >= 0 && num <= 255;
 }
-
-function GenerateIPAddresses(number) {
+export function GenerateIPAddresses(number) {
 	const num = number.toString();
 	const length = num.length;
 	const ips = [];
@@ -287,22 +275,19 @@ function GenerateIPAddresses(number) {
 
 	return ips.toString();
 }
-
-function FactorialDivision(n, d) {
+export function FactorialDivision(n, d) {
 	if(n === 0 || n === 1 || n === d)
 		return 1;
 
 	return FactorialDivision(n - 1, d) * n;
 }
-
-function UniquePathsI(grid) {
+export function UniquePathsI(grid) {
 	const rightMoves = grid[0] - 1;
 	const downMoves = grid[1] - 1;
 
 	return Math.round(FactorialDivision(rightMoves + downMoves, rightMoves) / FactorialDivision(downMoves, 1));
 }
-
-function UniquePathsII(grid, ignoreFirst = false, ignoreLast = false) {
+export function UniquePathsII(grid, ignoreFirst = false, ignoreLast = false) {
 	const rightMoves = grid[0].length - 1;
 	const downMoves = grid.length - 1;
 	let total = Math.round(FactorialDivision(rightMoves + downMoves, rightMoves) / FactorialDivision(downMoves, 1));
@@ -328,8 +313,7 @@ function UniquePathsII(grid, ignoreFirst = false, ignoreLast = false) {
 
 	return total;
 }
-
-function WaysToSumI(data) {
+export function WaysToSumI(data) {
 	const ways = [];
 
 	ways[0] = 1;
@@ -344,8 +328,7 @@ function WaysToSumI(data) {
 
 	return ways[data];
 }
-
-function WaysToSumII(data) {
+export function WaysToSumII(data) {
 	const [num, nums] = data;
 	const ways = [];
 
@@ -364,8 +347,7 @@ function WaysToSumII(data) {
 
 	return ways[num];
 }
-
-function ValidMathExpressions(data) {
+export function ValidMathExpressions(data) {
 	const operators = ["", "+", "-", "*"];
 	const permutations = Math.pow(4, data[0].length - 1);
 	const valid = [];
@@ -415,8 +397,7 @@ function ValidMathExpressions(data) {
 
 	return valid.toString();
 }
-
-function MinTriangleSum(data) {
+export function MinTriangleSum(data) {
 	let previous = data[0];
 	let next;
 
@@ -438,8 +419,7 @@ function MinTriangleSum(data) {
 
 	return Math.min(...next);
 }
-
-function ShortestPathInGrid(data) {
+export function ShortestPathInGrid(data) {
 	const H = data.length;
 	const W = data[0].length;
 	const dist = Array.from(Array(H), () => Array(W).fill(Number.POSITIVE_INFINITY));
@@ -514,8 +494,7 @@ function ShortestPathInGrid(data) {
 
 	return path;
 }
-
-function dfs(pair, index, left, right, s, solution, res) {
+export function dfs(pair, index, left, right, s, solution, res) {
 	if(s.length === index) {
 		if(left === 0 && right === 0 && pair === 0) {
 			for(let i = 0; i < res.length; i++) {
@@ -545,8 +524,7 @@ function dfs(pair, index, left, right, s, solution, res) {
 		dfs(pair, index + 1, left, right, s, solution + s[index], res);
 	}
 }
-
-function SanitizeParentheses(data) {
+export function SanitizeParentheses(data) {
 	const res = [];
 	let left = 0;
 	let right = 0;
@@ -562,20 +540,17 @@ function SanitizeParentheses(data) {
 
 	return res;
 }
-
-function HammingSumOfParity(length) {
+export function HammingSumOfParity(length) {
 	return length < 3 || length === 0
 		? length === 0 ? 0 : length + 1
 		: Math.ceil(Math.log2(length * 2)) <= Math.ceil(Math.log2(1 + length + Math.ceil(Math.log2(length))))
 			? Math.ceil(Math.log2(length) + 1)
 			: Math.ceil(Math.log2(length));
 }
-
-function HammingCount(arr, val) {
+export function HammingCount(arr, val) {
 	return arr.reduce((a, v) => v === val ? a + 1 : a, 0);
 }
-
-function HammingEncode(data) {
+export function HammingEncode(data) {
 	const dataBits = data.toString(2);
 	const bits = dataBits.split("");
 	const build = [];
@@ -604,8 +579,7 @@ function HammingEncode(data) {
 
 	return build.join("");
 }
-
-function HammingDecode(data) {
+export function HammingDecode(data) {
 	const build = data.split("");
 	const testArray = [];
 	const sumParity = Math.ceil(Math.log2(data.length));
@@ -651,8 +625,7 @@ function HammingDecode(data) {
 
 	return parseInt(build.join(""), 2);
 }
-
-function LargestPrimeFactor(data) {
+export function LargestPrimeFactor(data) {
 	const factors = [];
 	let num = data;
 	let d = 2;
@@ -678,8 +651,7 @@ function LargestPrimeFactor(data) {
 
 	return "";
 }
-
-function StockTrader(data) {
+export function StockTrader(data) {
 	const [maxTrades, stockPrices] = data;
 	const highestProfit = [];
 
@@ -721,8 +693,7 @@ function StockTrader(data) {
 
 	return highestProfit[maxTrades - 1][stockPrices.length - 1];
 }
-
-function MergeIntervals(data) {
+export function MergeIntervals(data) {
 	const intervals = data;
 
 	intervals.sort(([minA], [minB]) => minA - minB);
@@ -745,15 +716,13 @@ function MergeIntervals(data) {
 
 	return intervals;
 }
-
-function Neighborhood(data, vertex) {
+export function Neighborhood(data, vertex) {
 	const adjLeft = data[1].filter(([a, _]) => a === vertex).map(([_, b]) => b);
 	const adjRight = data[1].filter(([_, b]) => b === vertex).map(([a, _]) => a);
 
 	return adjLeft.concat(adjRight);
 }
-
-function ColoringOfGraph(data) {
+export function ColoringOfGraph(data) {
 	const coloring = Array(data[0]).fill(undefined);
 
 	while(coloring.some(val => val == null)) {
@@ -786,8 +755,7 @@ function ColoringOfGraph(data) {
 
 	return coloring;
 }
-
-function SpiralColumn(data, index) {
+export function SpiralColumn(data, index) {
 	const res = [];
 
 	for(let i = 0; i < data.length; i++) {
@@ -799,8 +767,7 @@ function SpiralColumn(data, index) {
 
 	return res;
 }
-
-function SpiralMatrix(data, progress = []) {
+export function SpiralMatrix(data, progress = []) {
 	if(data.length === 0 || data[0].length === 0)
 		return progress;
 
@@ -826,8 +793,7 @@ function SpiralMatrix(data, progress = []) {
 
 	return SpiralMatrix(data, progress);
 }
-
-function SubarrayMaxSum(data) {
+export function SubarrayMaxSum(data) {
 	let highest = data[0];
 
 	for(let i = 0; i < data.length; i++) {
@@ -844,158 +810,4 @@ function SubarrayMaxSum(data) {
 	}
 
 	return highest;
-}
-
-/** @param {import("../").NS} ns */
-function FindContracts(ns) {
-	return ScanAll(ns)
-		.map(name => ({name, contracts: ns.ls(name, ".cct")}))
-		.filter(server => server.contracts.length !== 0);
-}
-
-function AnswerContract(type, data) {
-	switch(type) {
-		case "Compression I: RLE Compression":
-			return RLECompress(data);
-		case "Compression II: LZ Decompression":
-			return LZDecompress(data);
-		case "Compression III: LZ Compression":
-			return LZCompress(data);
-		case "Encryption I: Caesar Cipher":
-			return CaesarCipher(data);
-		case "Encryption II: Vigenère Cipher":
-			return VigenereCipher(data);
-		case "Array Jumping Game":
-			return JumpingGameI(data);
-		case "Array Jumping Game II":
-			return JumpingGameII(data);
-		case "Generate IP Addresses":
-			return GenerateIPAddresses(data);
-		case "Unique Paths in a Grid I":
-			return UniquePathsI(data);
-		case "Unique Paths in a Grid II":
-			return UniquePathsII(data);
-		case "Total Ways to Sum":
-			return WaysToSumI(data);
-		case "Total Ways to Sum II":
-			return WaysToSumII(data);
-		case "Find All Valid Math Expressions":
-			return ValidMathExpressions(data);
-		case "Minimum Path Sum in a Triangle":
-			return MinTriangleSum(data);
-		case "Shortest Path in a Grid":
-			return ShortestPathInGrid(data);
-		case "Sanitize Parentheses in Expression":
-			return SanitizeParentheses(data);
-		case "HammingCodes: Integer to Encoded Binary":
-			return HammingEncode(data);
-		case "HammingCodes: Encoded Binary to Integer":
-			return HammingDecode(data);
-		case "Find Largest Prime Factor":
-			return LargestPrimeFactor(data);
-		case "Algorithmic Stock Trader I":
-			return StockTrader([1, data]);
-		case "Algorithmic Stock Trader II":
-			return StockTrader([Math.ceil(data.length / 2), data]);
-		case "Algorithmic Stock Trader III":
-			return StockTrader([2, data]);
-		case "Algorithmic Stock Trader IV":
-			return StockTrader(data);
-		case "Merge Overlapping Intervals":
-			return MergeIntervals(data);
-		case "Proper 2-Coloring of a Graph":
-			return ColoringOfGraph(data);
-		case "Spiralize Matrix":
-			return SpiralMatrix(data);
-		case "Subarray with Maximum Sum":
-			return SubarrayMaxSum(data);
-		default:
-			throw Error(`MISSING TYPE! ${type}`);
-	}
-}
-
-class Rewards {
-	constructor() {
-		this.money = 0;
-		this.companies = new Map();
-		this.all = 0;
-		this.factions = new Map();
-	}
-
-	add(ns, reward) {
-		const start = reward.indexOf(" ") + 1;
-
-		if(reward.includes("faction reputation")) {
-			const faction = reward.slice(reward.indexOf("for") + 4);
-			const amount = Number(reward.slice(start, reward.indexOf(" ", start)));
-
-			this.factions.set(faction, (this.factions.get(faction) ?? 0) + amount);
-		}else if(reward.includes("reputation for each")) {
-			this.all += Number(reward.slice(start, reward.indexOf(" ", start)));
-		}else if(reward.includes("$")) {
-			this.money += Number(reward.slice(start + 1, -1)) * 1e6;
-		}else{
-			ns.tprint("UNLISTED REWARD! ", reward);
-		}
-	}
-
-	list() {
-		const results = [];
-
-		if(this.money > 0)
-			results.push(`$${nFormat(this.money)}`);
-
-		for(const [name, rep] of this.companies.entries())
-			results.push(`${nFormat(rep)} reputation for ${name}`);
-
-		if(this.all > 0)
-			results.push(`${nFormat(this.all)} reputation for all factions`);
-
-		for(const [name, rep] of this.factions.entries())
-			results.push(`${nFormat(rep)} reputation for ${name}`);
-
-		return results.length === 1 ? ` ${results[0]}` : `\n  - ${results.join("\n  - ")}`;
-	}
-}
-
-/** @param {import("../").NS} ns */
-export async function main(ns) {
-	ns.disableLog("ALL");
-
-	const servers = FindContracts(ns);
-	const rewards = new Rewards();
-	let success = 0;
-	let total = 0;
-
-	for(const {name, contracts} of servers) {
-		for(const contract of contracts) {
-			const type = ns.codingcontract.getContractType(contract, name);
-			const data = ns.codingcontract.getData(contract, name);
-			let answer;
-
-			try {
-				answer = AnswerContract(type, data);
-			}catch(err) {
-				ns.tprint(`${DEFAULT_COLOR}${err.message}`);
-
-				continue;
-			}
-
-			const reward = ns.codingcontract.attempt(answer, contract, name, {returnReward: true});
-
-			if(reward === "") {
-				ns.tprint(`${DEFAULT_COLOR}FAILED CONTRACT! Type: ${type} Data: ${JSON.stringify(data)}`);
-			}else{
-				++success;
-				rewards.add(ns, reward);
-			}
-
-			++total;
-		}
-	}
-
-	if(total === 0)
-		ns.tprint(`${DEFAULT_COLOR}Found no CCTs to complete.`);
-	else
-		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list()}`);
 }
