@@ -75,37 +75,67 @@ interface Player {
 /**
  * @public
  */
-export interface Multipliers {
-  hacking_chance: number;
-  hacking_speed: number;
-  hacking_money: number;
-  hacking_grow: number;
-  hacking: number;
-  hacking_exp: number;
-  strength: number;
-  strength_exp: number;
-  defense: number;
-  defense_exp: number;
-  dexterity: number;
-  dexterity_exp: number;
-  agility: number;
-  agility_exp: number;
-  charisma: number;
-  charisma_exp: number;
-  hacknet_node_money: number;
-  hacknet_node_purchase_cost: number;
-  hacknet_node_ram_cost: number;
-  hacknet_node_core_cost: number;
-  hacknet_node_level_cost: number;
-  company_rep: number;
-  faction_rep: number;
-  work_money: number;
-  crime_success: number;
-  crime_money: number;
-  bladeburner_max_stamina: number;
-  bladeburner_stamina_gain: number;
-  bladeburner_analysis: number;
-  bladeburner_success_chance: number;
+ export interface Multipliers {
+  /** Multiplier to hacking skill */
+  hacking?: number;
+  /** Multiplier to strength skill */
+  strength?: number;
+  /** Multiplier to defense skill */
+  defense?: number;
+  /** Multiplier to dexterity skill */
+  dexterity?: number;
+  /** Multiplier to agility skill */
+  agility?: number;
+  /** Multiplier to charisma skill */
+  charisma?: number;
+  /** Multiplier to hacking experience gain rate */
+  hacking_exp?: number;
+  /** Multiplier to strength experience gain rate */
+  strength_exp?: number;
+  /** Multiplier to defense experience gain rate */
+  defense_exp?: number;
+  /** Multiplier to dexterity experience gain rate */
+  dexterity_exp?: number;
+  /** Multiplier to agility experience gain rate */
+  agility_exp?: number;
+  /** Multiplier to charisma experience gain rate */
+  charisma_exp?: number;
+  /** Multiplier to chance of successfully performing a hack */
+  hacking_chance?: number;
+  /** Multiplier to hacking speed */
+  hacking_speed?: number;
+  /** Multiplier to amount of money the player gains from hacking */
+  hacking_money?: number;
+  /** Multiplier to amount of money injected into servers using grow */
+  hacking_grow?: number;
+  /** Multiplier to amount of reputation gained when working */
+  company_rep?: number;
+  /** Multiplier to amount of reputation gained when working */
+  faction_rep?: number;
+  /** Multiplier to amount of money gained from crimes */
+  crime_money?: number;
+  /** Multiplier to crime success rate */
+  crime_success?: number;
+  /** Multiplier to amount of money gained from working */
+  work_money?: number;
+  /** Multiplier to amount of money produced by Hacknet Nodes */
+  hacknet_node_money?: number;
+  /** Multiplier to cost of purchasing a Hacknet Node */
+  hacknet_node_purchase_cost?: number;
+  /** Multiplier to cost of ram for a Hacknet Node */
+  hacknet_node_ram_cost?: number;
+  /** Multiplier to cost of core for a Hacknet Node */
+  hacknet_node_core_cost?: number;
+  /** Multiplier to cost of leveling up a Hacknet Node */
+  hacknet_node_level_cost?: number;
+  /** Multiplier to Bladeburner max stamina */
+  bladeburner_max_stamina?: number;
+  /** Multiplier to Bladeburner stamina gain rate */
+  bladeburner_stamina_gain?: number;
+  /** Multiplier to effectiveness in Bladeburner Field Analysis */
+  bladeburner_analysis?: number;
+  /** Multiplier to success chance in Bladeburner contracts/operations */
+  bladeburner_success_chance?: number;
 }
 
 /**
@@ -196,73 +226,6 @@ export interface CrimeStats {
   charisma_exp: number;
   /** intelligence exp gained from crime */
   intelligence_exp: number;
-}
-
-/**
- * Data representing the internal values of an Augmentation.
- * @public
- */
-export interface AugmentationStats {
-  /** Multiplier to hacking skill */
-  hacking?: number;
-  /** Multiplier to strength skill */
-  strength?: number;
-  /** Multiplier to defense skill */
-  defense?: number;
-  /** Multiplier to dexterity skill */
-  dexterity?: number;
-  /** Multiplier to agility skill */
-  agility?: number;
-  /** Multiplier to charisma skill */
-  charisma?: number;
-  /** Multiplier to hacking experience gain rate */
-  hacking_exp?: number;
-  /** Multiplier to strength experience gain rate */
-  strength_exp?: number;
-  /** Multiplier to defense experience gain rate */
-  defense_exp?: number;
-  /** Multiplier to dexterity experience gain rate */
-  dexterity_exp?: number;
-  /** Multiplier to agility experience gain rate */
-  agility_exp?: number;
-  /** Multiplier to charisma experience gain rate */
-  charisma_exp?: number;
-  /** Multiplier to chance of successfully performing a hack */
-  hacking_chance?: number;
-  /** Multiplier to hacking speed */
-  hacking_speed?: number;
-  /** Multiplier to amount of money the player gains from hacking */
-  hacking_money?: number;
-  /** Multiplier to amount of money injected into servers using grow */
-  hacking_grow?: number;
-  /** Multiplier to amount of reputation gained when working */
-  company_rep?: number;
-  /** Multiplier to amount of reputation gained when working */
-  faction_rep?: number;
-  /** Multiplier to amount of money gained from crimes */
-  crime_money?: number;
-  /** Multiplier to crime success rate */
-  crime_success?: number;
-  /** Multiplier to amount of money gained from working */
-  work_money?: number;
-  /** Multiplier to amount of money produced by Hacknet Nodes */
-  hacknet_node_money?: number;
-  /** Multiplier to cost of purchasing a Hacknet Node */
-  hacknet_node_purchase_cost?: number;
-  /** Multiplier to cost of ram for a Hacknet Node */
-  hacknet_node_ram_cost?: number;
-  /** Multiplier to cost of core for a Hacknet Node */
-  hacknet_node_core_cost?: number;
-  /** Multiplier to cost of leveling up a Hacknet Node */
-  hacknet_node_level_cost?: number;
-  /** Multiplier to Bladeburner max stamina */
-  bladeburner_max_stamina?: number;
-  /** Multiplier to Bladeburner stamina gain rate */
-  bladeburner_stamina_gain?: number;
-  /** Multiplier to effectiveness in Bladeburner Field Analysis */
-  bladeburner_analysis?: number;
-  /** Multiplier to success chance in Bladeburner contracts/operations */
-  bladeburner_success_chance?: number;
 }
 
 /**
@@ -1497,6 +1460,28 @@ export interface TIX {
  */
 export interface Singularity {
   /**
+   * Backup game save.
+   * @remarks
+   * RAM cost: 1 GB * 16/4/1
+   *
+   *
+   * This function will automatically opens the backup save prompt and claim the free faction favour if available.
+   *
+   */
+  exportGame(): void;
+
+  /**
+   * Returns Backup save bonus availability.
+   * @remarks
+   * RAM cost: 0.5 GB * 16/4/1
+   *
+   *
+   * This function will check if there is a bonus for backing up your save.
+   *
+   */
+  exportGameBonus(): boolean;
+
+  /**
    * Take university class.
    *
    * @remarks
@@ -1990,7 +1975,7 @@ export interface Singularity {
    * guarantee that your browser will follow that time limit.
    *
    * @param crime - Name of crime to attempt.
-   * @param focus - Acquire player focus on this program creation. Optional. Defaults to true.
+   * @param focus - Acquire player focus on this crime. Optional. Defaults to true.
    * @returns The number of milliseconds it takes to attempt the specified crime.
    */
   commitCrime(crime: string, focus?: boolean): number;
@@ -2153,7 +2138,7 @@ export interface Singularity {
    * @param name - Name of Augmentation. CASE-SENSITIVE.
    * @returns Augmentation stats.
    */
-  getAugmentationStats(name: string): AugmentationStats;
+  getAugmentationStats(name: string): Multipliers;
 
   /**
    * Install your purchased augmentations.
@@ -3489,7 +3474,7 @@ export interface Gang {
    * Ascend the specified Gang Member.
    *
    * @param memberName - Name of member to ascend.
-   * @returns Object with info about the ascension results. undefined if ascension did not occur.
+   * @returns Object with info about the ascension results. Undefined if ascension did not occur.
    */
   ascendMember(memberName: string): GangMemberAscension | undefined;
 
@@ -3501,7 +3486,7 @@ export interface Gang {
    * Get the result of an ascension without ascending.
    *
    * @param memberName - Name of member.
-   * @returns Object with info about the ascension results. undefined if ascension is impossible.
+   * @returns Object with info about the ascension results. Undefined if ascension is impossible.
    */
   getAscensionResult(memberName: string): GangMemberAscension | undefined;
 
@@ -5424,7 +5409,7 @@ export interface NS {
    * @remarks
    * RAM cost: 0 GB
    */
-  exit(): void;
+  exit(): never;
 
   /**
    * Copy file between servers.
@@ -7118,7 +7103,7 @@ interface CorporationInfo {
   numShares: number;
   /** Cooldown until shares can be sold again */
   shareSaleCooldown: number;
-  /** Amount of shares issued */
+  /** Amount of aqcuirable shares. */
   issuedShares: number;
   /** Price of the shares */
   sharePrice: number;
@@ -7211,10 +7196,25 @@ interface Material {
   prod: number;
   /** Amount of material sold */
   sell: number;
-  /** cost to buy material */
+  /** Cost to buy material */
   cost: number;
   /** Sell cost, can be "MP+5" */
   sCost: string | number;
+  /** Export orders */
+  exp: Export[];
+}
+
+/**
+ * Export order for a material
+ * @public
+ */
+interface Export {
+  /** Division the material is being exported to */
+  div: string;
+  /** City the material is being exported to */
+  loc: string;
+  /** Amount of material exported */
+  amt: string;
 }
 
 /**

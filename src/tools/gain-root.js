@@ -1,5 +1,5 @@
 import {TASK_SCRIPTS, PORT_PROGRAMS, DEFAULT_COLOR} from "utility/constants.js";
-import {ScanAll} from "utility/generic.js";
+import {ScanAll} from "utility/misc.js";
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {

@@ -1,6 +1,6 @@
 import {TAIL_COLORS, DEFAULT_COLOR} from "utility/constants.js";
-import {ScanAll} from "utility/generic.js";
-import {GetHackPercent, BestXPServer} from "utility/metrics.js";
+import {ScanAll} from "utility/misc.js";
+import {GetMetrics, BestXPServer} from "utility/metrics.js";
 
 /** @param {import("../").NS} ns */
 export async function main(ns) {
@@ -23,16 +23,15 @@ export async function main(ns) {
 }
 /** @param {import("../").NS} ns */
 export async function FindBestServer(ns, amount = 1) {
-	const level = ns.getPlayer().skills.hacking;
 	const servers = ScanAll(ns).filter(name => {
 		const server = ns.getServer(name);
 
-		return server.hasAdminRights && server.moneyMax > 0 && server.requiredHackingSkill <= level;
+		return server.hasAdminRights && server.moneyMax > 0;
 	});
 	let results = [];
 
 	for(const server of servers)
-		results.push(await GetHackPercent(ns, server));
+		results.push(await GetMetrics(ns, server));
 
 	results.sort((a, b) => b.profit - a.profit);
 	results = results.filter(s => s.pct > 0);

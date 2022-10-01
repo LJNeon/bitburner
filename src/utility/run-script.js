@@ -2,12 +2,9 @@ import {WEAKEN_GROW_RAM, HACK_RAM, SPREAD_THRESHOLD} from "utility/constants.js"
 import RAM from "utility/ram.js";
 
 /** @param {import("../").NS} ns */
-export default function RunScript(ns, script, target, threads, spread = false, partial = false, ...args) {
+export function FindScriptRAM(ns, ram, script, threads, spread = false, partial = false) {
 	const threadRAM = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
-	const ram = new RAM(ns);
 	const homeBonus = 1 + ((ns.getServer("home").cpuCores - 1) / 16);
-	const pids = [];
-	let spawned = 0;
 
 	if(spread && script === "weaken.js" && ram.free - ram.reserved >= SPREAD_THRESHOLD)
 		spread = false;
@@ -17,15 +14,14 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 		const spawn = Math.ceil(threads / homeBonus);
 
 		if(free - reserved >= threadRAM * threads) {
-			pids.push(ns.exec(script, "home", spawn, target, ...args, Math.random().toString(16).slice(2)));
 			ram.Reserve("home", spawn * threadRAM);
-			spawned += spawn;
 
-			if(!spread)
-				return pids;
+			return [{hostname: "home", threads: spawn}];
 		}
 	}
 
+	const hosts = [];
+	let spawned = 0;
 	let servers = ram.chunkList
 		.map(({hostname, free, reserved}) => ({hostname, threads: Math.floor((free - reserved) / threadRAM)}))
 		.filter(s => s.threads > 0);
@@ -44,7 +40,7 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 
 		if(server == null) {
 			if(partial)
-				servers = [servers[0]];
+				servers = [script === "weaken.js" ? servers[servers.length - 1] : servers[0]];
 			else
 				return [];
 		}else{
@@ -55,7 +51,25 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 	for(const server of servers) {
 		const spawn = Math.min(server.threads, threads - spawned);
 		const amount = server.hostname === "home" ? Math.ceil(spawn / homeBonus) : spawn;
-		const pid = ns.exec(script, server.hostname, amount, target, ...args, Math.random().toString(16).slice(2));
+
+		hosts.push({hostname: server.hostname, threads: amount});
+		ram.Reserve(server.hostname, amount * threadRAM);
+		spawned += spawn;
+
+		if(spawned >= threads)
+			break;
+	}
+
+	return hosts;
+}
+/** @param {import("../").NS} ns */
+export function RunScript(ns, script, target, threads, spread = false, partial = false, ...args) {
+	const ram = new RAM(ns);
+	const hosts = FindScriptRAM(ns, ram, script, threads, spread, partial);
+	const pids = [];
+
+	for(const server of hosts) {
+		const pid = ns.exec(script, server.hostname, server.threads, target, ...args, Math.random().toString(16).slice(2));
 
 		if(pid === 0) {
 			pids.forEach(id => ns.kill(id));
@@ -64,10 +78,6 @@ export default function RunScript(ns, script, target, threads, spread = false, p
 		}
 
 		pids.push(pid);
-		spawned += spawn;
-
-		if(spawned >= threads)
-			break;
 	}
 
 	return pids;

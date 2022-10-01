@@ -1,5 +1,5 @@
 import {MIN_HOME_RAM, PERSONAL_SERVER_SHARE} from "utility/constants.js";
-import {ScanAll} from "utility/generic.js";
+import {ScanAll} from "utility/misc.js";
 
 export default class RAM {
 	/** @param {import("../").NS} ns */
@@ -66,7 +66,7 @@ export default class RAM {
 	Reserve(hostname, size) {
 		const match = this.GetServer(hostname);
 
-		if(match == null || match.free - match.used >= size)
+		if(match == null || match.free - match.reserved < size)
 			return false;
 
 		match.reserved += size;

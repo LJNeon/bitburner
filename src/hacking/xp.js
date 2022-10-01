@@ -1,9 +1,9 @@
 import {
-	SAFETY_DELAY, FAILURE_COLOR, WARNING_COLOR, SUCCESS_COLOR,
+	JOB_SPACER, FAILURE_COLOR, WARNING_COLOR, SUCCESS_COLOR,
 	DEFAULT_COLOR
 } from "utility/constants.js";
-import {SleepPids, nFormat} from "utility/generic.js";
-import RunScript from "utility/run-script.js";
+import {SleepPids, nFormat} from "utility/misc.js";
+import {RunScript} from "utility/run-script.js";
 import {GetWeakThreads, GetGrowThreads, BestXPServer} from "utility/metrics.js";
 
 /** @param {import("../").NS} ns */
@@ -59,6 +59,6 @@ export async function main(ns) {
 			return ns.print(`${FAILURE_COLOR}Not enough RAM to spawn a single thread!`);
 
 		await SleepPids(ns, pids);
-		await ns.sleep(SAFETY_DELAY * 2);
+		await ns.sleep(JOB_SPACER * 2);
 	}
 }

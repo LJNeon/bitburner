@@ -7,7 +7,7 @@ import {
 	MergeIntervals, ColoringOfGraph, SpiralMatrix, SubarrayMaxSum
 } from "cct/solvers.js";
 import {DEFAULT_COLOR} from "utility/constants.js";
-import {ScanAll, nFormat} from "utility/generic.js";
+import {ScanAll, nFormat} from "utility/misc.js";
 
 /** @param {import("../").NS} ns */
 function FindContracts(ns) {

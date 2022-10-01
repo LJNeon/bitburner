@@ -1,15 +1,10 @@
 import {DEFAULT_COLOR, NORM_ABBRS, BYTE_ABBRS} from "utility/constants.js";
 
-/** @param {import("../").NS} ns */
-export function GenID(existing = []) {
-	let id = Math.random().toString(16).slice(-6);
+let lastID = 0;
 
-	while(existing.includes(id))
-		id = Math.random().toString(16).slice(-6);
-
-	return id;
+export function GenID() {
+	return lastID = (lastID + 1) % Number.MAX_SAFE_INTEGER;
 }
-/** @param {import("../").NS} ns */
 export function ScanAll(ns, root = "home", found = new Set()) {
 	found.add(root);
 
@@ -44,7 +39,7 @@ function Floor(num) {
 
 /*.
  * "l" is long format, e.g. 1,234,567
- * "n" is normal format, e.g. 1.23M
+ * "n" is normal format, e.g. 1.23m
  * "b" is byte format, e.g. 1.23GB
 .*/
 export function nFormat(num, format = "n", dec = 0) {
@@ -92,7 +87,7 @@ export function Table(rows, color) {
 	return result;
 }
 /** @param {import("../").NS} ns */
-export function DeleteLogLines(ns, amount) {
+export function ClearLastLogs(ns, amount, match) {
 	const lines = ns.getScriptLogs();
 
 	ns.clearLog();
@@ -101,7 +96,17 @@ export function DeleteLogLines(ns, amount) {
 		return;
 
 	for(let i = 0; i < lines.length; i++) {
-		if(lines.length - amount > i)
+		if(lines.length - amount > i || !lines[i].includes(match))
 			ns.print(lines[i]);
 	}
+}
+/** @param {import("../").NS} ns */
+export function ReadPort(ns, port) {
+	const handle = ns.getPortHandle(port);
+	const results = [];
+
+	while(!handle.empty())
+		results.push(handle.read());
+
+	return results;
 }

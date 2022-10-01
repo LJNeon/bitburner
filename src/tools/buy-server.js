@@ -1,5 +1,5 @@
 import {TASK_SCRIPTS, PERSONAL_SERVER_SHARE} from "utility/constants.js";
-import {GenID, ScanAll} from "utility/generic.js";
+import {GenID, ScanAll} from "utility/misc.js";
 
 const MONEY_LIMIT = 0.4;
 const MAX_RAM = 2 ** 20;

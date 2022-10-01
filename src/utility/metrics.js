@@ -1,14 +1,15 @@
 import {
-	HACK_RAM, WEAKEN_GROW_RAM, WEAKEN_GROW_EXTRA, IDS,
-	SEC_PER_THREAD, LEECH_PERCENTS
+	IDS, JOB_SPACER, HACK_LEVEL_RANGE, SEC_PER_THREAD,
+	LEECH_PERCENTS
 } from "utility/constants.js";
-import {ScanAll} from "utility/generic.js";
+import {ScanAll} from "utility/misc.js";
 import RAM from "utility/ram.js";
+import {FindScriptRAM} from "utility/run-script.js";
 import {CalcPeriodDepth} from "utility/stalefish.js";
 
 /** @param {import("../").NS} ns */
 export function GetWeakThreads(security) {
-	return Math.ceil(security / SEC_PER_THREAD.WEAKEN * WEAKEN_GROW_EXTRA);
+	return Math.ceil(security / SEC_PER_THREAD.WEAKEN);
 }
 
 /** @param {import("../").NS} ns */
@@ -45,7 +46,7 @@ export function GetGrowThreads(ns, server, player, cores = 1) {
 
 	const max = Math.ceil(Math.log(server.moneyMax)
 		/ Math.log(ns.formulas.hacking.growPercent(server, 1, player, cores)));
-	const threads = Math.ceil(BinarySearchGrow(ns, 1, max, server, player, cores) * WEAKEN_GROW_EXTRA);
+	const threads = BinarySearchGrow(ns, 1, max, server, player, cores);
 	const newMoney = CalcGrowth(ns, server, player, threads, cores);
 	const diff = server.moneyMax - newMoney;
 
@@ -59,10 +60,7 @@ export function GetHackThreads(ns, server, player, pct) {
 	return Math.floor(pct / ns.formulas.hacking.hackPercent(server, player));
 }
 /** @param {import("../").NS} ns */
-export function GetThreads(ns, target, pct) {
-	const server = ns.getServer(target);
-	const player = ns.getPlayer();
-
+export function GetThreads(ns, server, player, pct) {
 	server.hackDifficulty = server.minDifficulty;
 	server.moneyAvailable = server.moneyMax;
 
@@ -79,26 +77,46 @@ export function GetThreads(ns, target, pct) {
 		hackThreads
 	];
 }
-/** @param {import("../").NS} ns */
-export function GetBatchRam(ns, target, pct) {
-	const threads = GetThreads(ns, target, pct);
 
-	return (HACK_RAM * threads[IDS.H]) + (WEAKEN_GROW_RAM * (threads[IDS.W1] + threads[IDS.W2] + threads[IDS.G]));
-}
 /** @param {import("../").NS} ns */
-export async function GetHackPercent(ns, target) {
+function DepthByRAM(ns, target, pct) {
+	const server = ns.getServer(target);
+	const player = ns.getPlayer();
+
+	server.hackDifficulty = server.minDifficulty;
+	player.skills.hacking += HACK_LEVEL_RANGE;
+
+	const weakT = ns.formulas.hacking.weakenTime(server, player);
+	const limit = Math.floor(weakT / (JOB_SPACER * 8));
 	const ram = new RAM(ns, true);
-	const free = ram.free - ram.reserved;
-	let pct = 0;
+	const threads = GetThreads(ns, server, player, pct);
+	let depth = 0;
+
+	for(; depth < limit; depth++) {
+		if(FindScriptRAM(ns, ram, "weaken.js", threads[IDS.W1], true).length === 0)
+			break;
+		else if(FindScriptRAM(ns, ram, "weaken.js", threads[IDS.W2], true).length === 0)
+			break;
+		else if(FindScriptRAM(ns, ram, "grow.js", threads[IDS.G], true).length === 0)
+			break;
+		else if(FindScriptRAM(ns, ram, "hack.js", threads[IDS.H], true).length === 0)
+			break;
+	}
+
+	return depth;
+}
+
+/** @param {import("../").NS} ns */
+export async function GetMetrics(ns, target) {
+	let percent = 0;
 	let profit = 0;
 	let period;
 	let depth;
 
 	for(const hackPct of LEECH_PERCENTS) {
-		const batchSize = GetBatchRam(ns, target, hackPct);
-		const sizeLimit = Math.floor(free / batchSize);
+		const limit = DepthByRAM(ns, target, hackPct);
 
-		if(sizeLimit === 0)
+		if(limit === 0)
 			break;
 
 		const server = ns.getServer(target);
@@ -106,7 +124,7 @@ export async function GetHackPercent(ns, target) {
 		server.hackDifficulty = server.minDifficulty;
 
 		const chance = ns.formulas.hacking.hackChance(server, ns.getPlayer());
-		const sf = CalcPeriodDepth(ns, target, sizeLimit);
+		const sf = CalcPeriodDepth(ns, target, limit);
 
 		if(sf == null)
 			break;
@@ -114,7 +132,7 @@ export async function GetHackPercent(ns, target) {
 		const nextProfit = server.moneyMax * chance * hackPct * sf.depth / (sf.period * sf.depth / 1e3);
 
 		if(nextProfit > profit) {
-			pct = hackPct;
+			percent = hackPct;
 			profit = nextProfit;
 			({period, depth} = sf);
 		}
@@ -124,7 +142,7 @@ export async function GetHackPercent(ns, target) {
 
 	return {
 		target,
-		pct,
+		percent,
 		profit,
 		period,
 		depth

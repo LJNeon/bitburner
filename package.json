@@ -5,7 +5,8 @@
   "scripts": {
     "lint": "eslint src --ext .js",
     "push": "bitburner-sync",
-    "pull": "bitburner-sync --get"
+    "pull": "bitburner-sync --get",
+    "define": "curl -L -o src/index.d.ts https://raw.githubusercontent.com/danielyxie/bitburner/dev/src/ScriptEditor/NetscriptDefinitions.d.ts"
   },
   "dependencies": {
     "bitburner-sync": "^1.5.3"
