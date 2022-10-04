@@ -1,0 +1,11 @@
+{
+  "allowedFiletypes": [".js"],
+  "allowDeletingFiles": false,
+  "port": 46937,
+  "scriptsFolder": "dist",
+  "definitionFile": {
+    "update": true,
+    "location": "NetscriptDefinitions.d.ts"
+  },
+  "pushAllOnConnection": true
+}

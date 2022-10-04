@@ -1,3 +1,4 @@
+import {NS} from "@ns";
 import {
 	RLECompress, LZDecompress, LZCompress, CaesarCipher,
 	VigenereCipher, JumpingGameI, JumpingGameII, GenerateIPAddresses,
@@ -5,18 +6,18 @@ import {
 	ValidMathExpressions, MinTriangleSum, ShortestPathInGrid, SanitizeParentheses,
 	HammingEncode, HammingDecode, LargestPrimeFactor, StockTrader,
 	MergeIntervals, ColoringOfGraph, SpiralMatrix, SubarrayMaxSum
-} from "cct/solvers.js";
-import {DEFAULT_COLOR} from "utility/constants.js";
-import {ScanAll, nFormat} from "utility/misc.js";
+} from "cct/solvers";
+import {Color} from "utility/enums";
+import {ScanAll, nFormat} from "utility/misc";
 
-/** @param {import("../").NS} ns */
-function FindContracts(ns) {
+function FindContracts(ns: NS) {
 	return ScanAll(ns)
-		.map(name => ({name, contracts: ns.ls(name, ".cct")}))
+		.map(hostname => ({hostname, contracts: ns.ls(hostname, ".cct")}))
 		.filter(server => server.contracts.length !== 0);
 }
 
-function AnswerContract(type, data) {
+/*. See comment at the start of cct/solvers.js .*/
+function AnswerContract(type: string, data: unknown) {
 	switch(type) {
 		case "Compression I: RLE Compression":
 			return RLECompress(data);
@@ -59,7 +60,7 @@ function AnswerContract(type, data) {
 		case "Algorithmic Stock Trader I":
 			return StockTrader([1, data]);
 		case "Algorithmic Stock Trader II":
-			return StockTrader([Math.ceil(data.length / 2), data]);
+			return StockTrader([Math.ceil((data as string[]).length / 2), data]);
 		case "Algorithmic Stock Trader III":
 			return StockTrader([2, data]);
 		case "Algorithmic Stock Trader IV":
@@ -78,25 +79,23 @@ function AnswerContract(type, data) {
 }
 
 class Rewards {
-	constructor() {
-		this.money = 0;
-		this.companies = new Map();
-		this.all = 0;
-		this.factions = new Map();
-	}
+	#money = 0;
+	#companies = new Map<string, number>();
+	#all = 0;
+	#factions = new Map<string, number>();
 
-	add(ns, reward) {
+	add(ns: NS, reward: string) {
 		const start = reward.indexOf(" ") + 1;
 
 		if(reward.includes("faction reputation")) {
 			const faction = reward.slice(reward.indexOf("for") + 4);
 			const amount = Number(reward.slice(start, reward.indexOf(" ", start)));
 
-			this.factions.set(faction, (this.factions.get(faction) ?? 0) + amount);
+			this.#factions.set(faction, (this.#factions.get(faction) ?? 0) + amount);
 		}else if(reward.includes("reputation for each")) {
-			this.all += Number(reward.slice(start, reward.indexOf(" ", start)));
+			this.#all += Number(reward.slice(start, reward.indexOf(" ", start)));
 		}else if(reward.includes("$")) {
-			this.money += Number(reward.slice(start + 1, -1)) * 1e6;
+			this.#money += Number(reward.slice(start + 1, -1)) * 1e6;
 		}else{
 			ns.tprint("UNLISTED REWARD! ", reward);
 		}
@@ -105,24 +104,23 @@ class Rewards {
 	list() {
 		const results = [];
 
-		if(this.money > 0)
-			results.push(`$${nFormat(this.money)}`);
+		if(this.#money > 0)
+			results.push(`$${nFormat(this.#money)}`);
 
-		for(const [name, rep] of this.companies.entries())
-			results.push(`${nFormat(rep)} reputation for ${name}`);
+		for(const [title, rep] of this.#companies.entries())
+			results.push(`${nFormat(rep)} reputation for ${title}`);
 
-		if(this.all > 0)
-			results.push(`${nFormat(this.all)} reputation for all factions`);
+		if(this.#all > 0)
+			results.push(`${nFormat(this.#all)} reputation for all factions`);
 
-		for(const [name, rep] of this.factions.entries())
-			results.push(`${nFormat(rep)} reputation for ${name}`);
+		for(const [title, rep] of this.#factions.entries())
+			results.push(`${nFormat(rep)} reputation for ${title}`);
 
 		return results.length === 1 ? ` ${results[0]}` : `\n  - ${results.join("\n  - ")}`;
 	}
 }
 
-/** @param {import("../").NS} ns */
-export async function main(ns) {
+export async function main(ns: NS) {
 	ns.disableLog("ALL");
 
 	const servers = FindContracts(ns);
@@ -130,27 +128,28 @@ export async function main(ns) {
 	let success = 0;
 	let total = 0;
 
-	for(const {name, contracts} of servers) {
+	for(const {hostname, contracts} of servers) {
 		for(const contract of contracts) {
-			const type = ns.codingcontract.getContractType(contract, name);
-			const data = ns.codingcontract.getData(contract, name);
+			const type = ns.codingcontract.getContractType(contract, hostname);
+			const data = ns.codingcontract.getData(contract, hostname);
 			let answer;
 
 			try {
 				answer = AnswerContract(type, data);
 			}catch(err) {
-				ns.tprint(`${DEFAULT_COLOR}${err.message}`);
+				if(err instanceof Error)
+					ns.tprint(`${Color.Fail}${err.message}`);
 
 				continue;
 			}
 
-			const reward = ns.codingcontract.attempt(answer, contract, name, {returnReward: true});
+			const reward = ns.codingcontract.attempt(answer, contract, hostname, {returnReward: true});
 
 			if(reward === "") {
-				ns.tprint(`${DEFAULT_COLOR}FAILED CONTRACT! Type: ${type} Data: ${JSON.stringify(data)}`);
+				ns.tprint(`${Color.Fail}FAILED CONTRACT! Type: ${type} Data: ${JSON.stringify(data)}`);
 			}else{
 				++success;
-				rewards.add(ns, reward);
+				rewards.add(ns, String(reward));
 			}
 
 			++total;
@@ -158,7 +157,7 @@ export async function main(ns) {
 	}
 
 	if(total === 0)
-		ns.tprint(`${DEFAULT_COLOR}Found no CCTs to complete.`);
+		ns.tprint(`${Color.Default}Found no CCTs to complete.`);
 	else
-		ns.tprint(`${DEFAULT_COLOR}Completed ${success}/${total} CCTs for these rewards:${rewards.list()}`);
+		ns.tprint(`${Color.Default}Completed ${success}/${total} CCTs for these rewards:${rewards.list()}`);
 }

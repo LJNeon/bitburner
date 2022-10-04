@@ -1,9 +1,9 @@
+import {NS} from "@ns";
 import {PERSONAL_SERVER_SHARE} from "utility/constants.js";
 
-/** @param {import("../").NS} ns */
-export async function main(ns) {
+export async function main(ns: NS) {
 	const script = "share.js";
-	const ratio = ns.args[0] ?? PERSONAL_SERVER_SHARE;
+	const ratio = Number(ns.args[0] ?? PERSONAL_SERVER_SHARE);
 	const shareRam = ns.getScriptRam(script);
 
 	for(const server of ns.getPurchasedServers()) {

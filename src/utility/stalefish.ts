@@ -1,13 +1,14 @@
-import {JOB_SPACER, HACK_LEVEL_RANGE} from "utility/constants.js";
-import {TASKS} from "utility/enums.js";
+import {NS} from "@ns";
+import {JOB_SPACER, HACK_LEVEL_RANGE} from "utility/constants";
+import {Task} from "utility/enums";
 
 /**
  * Calculates the period and depth for a range of hacking levels.
- * @param {import("../").NS} ns
- * @param {string} target The target server to calculate for.
- * @param {number} limit The maximum depth allowed by safety and available RAM.
+ * @param ns
+ * @param target The target server to calculate for.
+ * @param limit The maximum depth allowed by safety and available RAM.
  */
-export function CalcPeriodDepth(ns, target, limit) {
+export function CalcPeriodDepth(ns: NS, target: string, limit: number) {
 	const server = ns.getServer(target);
 	const player = ns.getPlayer();
 
@@ -55,13 +56,15 @@ export function CalcPeriodDepth(ns, target, limit) {
 		}
 	}
 
+	if(period == null || depth == null)
+		return null;
+
 	return {period, depth};
 }
 /**
  * Calculates the four HWGW delays for the current hacking level.
- * @param {import("../").NS} ns
  */
-export function CalcDelays(ns, target, period, depth) {
+export function CalcDelays(ns: NS, target: string, period: number, depth: number): Record<Task, number> {
 	const server = ns.getServer(target);
 	const player = ns.getPlayer();
 
@@ -72,9 +75,9 @@ export function CalcDelays(ns, target, period, depth) {
 	const hackT = ns.formulas.hacking.hackTime(server, player);
 
 	return {
-		[TASKS.WEAK_1]: Math.round((period * depth) - (JOB_SPACER * 3) - weakT),
-		[TASKS.WEAK_2]: Math.round((period * depth) - JOB_SPACER - weakT),
-		[TASKS.GROW]: Math.round((period * depth) - (JOB_SPACER * 2) - growT),
-		[TASKS.HACK]: Math.round((period * depth) - (JOB_SPACER * 4) - hackT)
+		[Task.Weak1]: Math.round((period * depth) - (JOB_SPACER * 3) - weakT),
+		[Task.Weak2]: Math.round((period * depth) - JOB_SPACER - weakT),
+		[Task.Grow]: Math.round((period * depth) - (JOB_SPACER * 2) - growT),
+		[Task.Hack]: Math.round((period * depth) - (JOB_SPACER * 4) - hackT)
 	};
 }

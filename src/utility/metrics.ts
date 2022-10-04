@@ -1,26 +1,24 @@
+import {NS, Server, Player} from "@ns";
 import {
-	IDS, JOB_SPACER, HACK_LEVEL_RANGE, SEC_PER_THREAD,
-	LEECH_PERCENTS
-} from "utility/constants.js";
-import {ScanAll} from "utility/misc.js";
-import RAM from "utility/ram.js";
-import {FindScriptRAM} from "utility/run-script.js";
-import {CalcPeriodDepth} from "utility/stalefish.js";
+	JOB_SPACER, HACK_LEVEL_RANGE, SEC_PER_THREAD, LEECH_PERCENTS,
+	HACK_RAM, WEAKEN_GROW_RAM
+} from "utility/constants";
+import {Task} from "utility/enums";
+import {ScanAll} from "utility/misc";
+import RAM from "utility/ram";
+import {CalcPeriodDepth} from "utility/stalefish";
 
-/** @param {import("../").NS} ns */
-export function GetWeakThreads(security) {
+export function GetWeakThreads(security: number) {
 	return Math.ceil(security / SEC_PER_THREAD.WEAKEN);
 }
 
-/** @param {import("../").NS} ns */
-function CalcGrowth(ns, server, player, threads, cores) {
+function CalcGrowth(ns: NS, server: Server, player: Player, threads: number, cores: number) {
 	const serverGrowth = ns.formulas.hacking.growPercent(server, threads, player, cores);
 
 	return (server.moneyAvailable + threads) * serverGrowth;
 }
 
-/** @param {import("../").NS} ns */
-function BinarySearchGrow(ns, min, max, server, player, cores) {
+function BinarySearchGrow(ns: NS, min: number, max: number, server: Server, player: Player, cores: number): number {
 	if(min === max)
 		return max;
 
@@ -39,8 +37,7 @@ function BinarySearchGrow(ns, min, max, server, player, cores) {
 	return threads;
 }
 
-/** @param {import("../").NS} ns */
-export function GetGrowThreads(ns, server, player, cores = 1) {
+export function GetGrowThreads(ns: NS, server: Server, player: Player, cores = 1) {
 	if(server.moneyAvailable >= server.moneyMax || isNaN(server.moneyAvailable))
 		return 0;
 
@@ -55,12 +52,10 @@ export function GetGrowThreads(ns, server, player, cores = 1) {
 
 	return threads;
 }
-/** @param {import("../").NS} ns */
-export function GetHackThreads(ns, server, player, pct) {
+export function GetHackThreads(ns: NS, server: Server, player: Player, pct: number) {
 	return Math.floor(pct / ns.formulas.hacking.hackPercent(server, player));
 }
-/** @param {import("../").NS} ns */
-export function GetThreads(ns, server, player, pct) {
+export function GetThreads(ns: NS, server: Server, player: Player, pct: number): Record<Task, number> {
 	server.hackDifficulty = server.minDifficulty;
 	server.moneyAvailable = server.moneyMax;
 
@@ -70,16 +65,15 @@ export function GetThreads(ns, server, player, pct) {
 
 	const growThreads = GetGrowThreads(ns, server, player);
 
-	return [
-		GetWeakThreads(hackThreads * SEC_PER_THREAD.HACK),
-		GetWeakThreads(growThreads * SEC_PER_THREAD.GROW),
-		growThreads,
-		hackThreads
-	];
+	return {
+		[Task.Weak1]: GetWeakThreads(hackThreads * SEC_PER_THREAD.HACK),
+		[Task.Weak2]: GetWeakThreads(growThreads * SEC_PER_THREAD.GROW),
+		[Task.Grow]: growThreads,
+		[Task.Hack]: hackThreads
+	};
 }
 
-/** @param {import("../").NS} ns */
-function DepthByRAM(ns, target, pct) {
+function GetDepthLimit(ns: NS, target: string, pct: number) {
 	const server = ns.getServer(target);
 	const player = ns.getPlayer();
 
@@ -90,66 +84,64 @@ function DepthByRAM(ns, target, pct) {
 	const limit = Math.floor(weakT / (JOB_SPACER * 8));
 	const ram = new RAM(ns, true);
 	const threads = GetThreads(ns, server, player, pct);
-	let depth = 0;
+	const batchRam = ((threads[Task.Weak1] + threads[Task.Weak2] + threads[Task.Grow]) * WEAKEN_GROW_RAM)
+		+ (threads[Task.Hack] * HACK_RAM);
 
-	for(; depth < limit; depth++) {
-		if(FindScriptRAM(ns, ram, "weaken.js", threads[IDS.W1], true).length === 0)
-			break;
-		else if(FindScriptRAM(ns, ram, "weaken.js", threads[IDS.W2], true).length === 0)
-			break;
-		else if(FindScriptRAM(ns, ram, "grow.js", threads[IDS.G], true).length === 0)
-			break;
-		else if(FindScriptRAM(ns, ram, "hack.js", threads[IDS.H], true).length === 0)
-			break;
-	}
-
-	return depth;
+	return Math.min(Math.floor(batchRam / (ram.free - ram.reserved)), limit);
 }
 
-/** @param {import("../").NS} ns */
-export async function GetMetrics(ns, target) {
-	let percent = 0;
-	let profit = 0;
+export interface Metrics {
+	hostname: string;
+	profit: number;
+	percent: number;
+	period: number;
+	depth: number;
+}
+export async function GetMetrics(ns: NS, hostname: string): Promise<Metrics | null> {
+	let percent;
+	let profit;
 	let period;
 	let depth;
 
 	for(const hackPct of LEECH_PERCENTS) {
-		const limit = DepthByRAM(ns, target, hackPct);
+		const limit = GetDepthLimit(ns, hostname, hackPct);
 
 		if(limit === 0)
 			break;
 
-		const server = ns.getServer(target);
+		const server = ns.getServer(hostname);
 
 		server.hackDifficulty = server.minDifficulty;
 
 		const chance = ns.formulas.hacking.hackChance(server, ns.getPlayer());
-		const sf = CalcPeriodDepth(ns, target, limit);
+		const sf = CalcPeriodDepth(ns, hostname, limit);
 
 		if(sf == null)
 			break;
 
 		const nextProfit = server.moneyMax * chance * hackPct * sf.depth / (sf.period * sf.depth / 1e3);
 
-		if(nextProfit > profit) {
+		if(profit == null || nextProfit > profit) {
 			percent = hackPct;
 			profit = nextProfit;
 			({period, depth} = sf);
 		}
 
-		await ns.sleep(5);
+		await ns.sleep(0);
 	}
 
+	if(percent == null || profit == null || period == null || depth == null)
+		return null;
+
 	return {
-		target,
+		hostname,
 		percent,
 		profit,
 		period,
 		depth
 	};
 }
-/** @param {import("../").NS} ns */
-export function BestXPServer(ns) {
+export function BestXPServer(ns: NS) {
 	const servers = ScanAll(ns).map(n => ns.getServer(n));
 	const player = ns.getPlayer();
 	let best;

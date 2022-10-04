@@ -1,3 +1,9 @@
+/*.
+ * I'm accepting PRs to convert this file to TypeScript.
+ * Those who don't open a PR forfeit all rights to complain about this file.
+ * PRs must also be fully tested.
+.*/
+
 export function RLECompress(data) {
 	const chars = Array.from(data);
 	let answer = "";
@@ -96,44 +102,44 @@ export function LZCompress(data) {
 
 		const c = plain[i];
 
-		for(let length = 1; length <= 9; ++length) {
-			const string = cur_state[0][length];
+		for(let len = 1; len <= 9; ++len) {
+			const string = cur_state[0][len];
 
 			if(string == null)
 				continue;
 
-			if(length < 9)
-				SetLZ(new_state, 0, length + 1, string);
+			if(len < 9)
+				SetLZ(new_state, 0, len + 1, string);
 			else
 				SetLZ(new_state, 0, 1, `${string  }9${  plain.substring(i - 9, i)  }0`);
 
 			for(let offset = 1; offset <= Math.min(9, i); ++offset) {
 				if(plain[i - offset] === c)
-					SetLZ(new_state, offset, 1, string + String(length) + plain.substring(i - length, i));
+					SetLZ(new_state, offset, 1, string + String(len) + plain.substring(i - len, i));
 
 			}
 		}
 
 		for(let offset = 1; offset <= 9; ++offset) {
-			for(let length = 1; length <= 9; ++length) {
-				const string = cur_state[offset][length];
+			for(let len = 1; len <= 9; ++len) {
+				const string = cur_state[offset][len];
 
 				if(string == null)
 					continue;
 
 				if(plain[i - offset] === c) {
-					if(length < 9)
-						SetLZ(new_state, offset, length + 1, string);
+					if(len < 9)
+						SetLZ(new_state, offset, len + 1, string);
 					else
 						SetLZ(new_state, offset, 1, `${string  }9${  String(offset)  }0`);
 
 				}
 
-				SetLZ(new_state, 0, 1, string + String(length) + String(offset));
+				SetLZ(new_state, 0, 1, string + String(len) + String(offset));
 
 				for(let new_offset = 1; new_offset <= Math.min(9, i); ++new_offset) {
 					if(plain[i - new_offset] === c)
-						SetLZ(new_state, new_offset, 1, `${string + String(length) + String(offset)  }0`);
+						SetLZ(new_state, new_offset, 1, `${string + String(len) + String(offset)  }0`);
 
 				}
 			}
@@ -254,12 +260,12 @@ export function IsValidIPSegment(segment) {
 }
 export function GenerateIPAddresses(number) {
 	const num = number.toString();
-	const length = num.length;
+	const len = num.length;
 	const ips = [];
 
-	for(let i = 1; i < length - 2; i++) {
-		for(let j = i + 1; j < length - 1; j++) {
-			for(let k = j + 1; k < length; k++) {
+	for(let i = 1; i < len - 2; i++) {
+		for(let j = i + 1; j < len - 1; j++) {
+			for(let k = j + 1; k < len; k++) {
 				const ip = [
 					num.slice(0, i),
 					num.slice(i, j),
@@ -540,12 +546,12 @@ export function SanitizeParentheses(data) {
 
 	return res;
 }
-export function HammingSumOfParity(length) {
-	return length < 3 || length === 0
-		? length === 0 ? 0 : length + 1
-		: Math.ceil(Math.log2(length * 2)) <= Math.ceil(Math.log2(1 + length + Math.ceil(Math.log2(length))))
-			? Math.ceil(Math.log2(length) + 1)
-			: Math.ceil(Math.log2(length));
+export function HammingSumOfParity(len) {
+	return len < 3 || len === 0
+		? len === 0 ? 0 : len + 1
+		: Math.ceil(Math.log2(len * 2)) <= Math.ceil(Math.log2(1 + len + Math.ceil(Math.log2(len))))
+			? Math.ceil(Math.log2(len) + 1)
+			: Math.ceil(Math.log2(len));
 }
 export function HammingCount(arr, val) {
 	return arr.reduce((a, v) => v === val ? a + 1 : a, 0);

@@ -1,8 +1,8 @@
-import {WEAKEN_GROW_RAM, HACK_RAM, SPREAD_THRESHOLD} from "utility/constants.js";
-import RAM from "utility/ram.js";
+import {NS} from "@ns";
+import {WEAKEN_GROW_RAM, HACK_RAM, SPREAD_THRESHOLD} from "utility/constants";
+import RAM from "utility/ram";
 
-/** @param {import("../").NS} ns */
-export function FindScriptRAM(ns, ram, script, threads, spread = false, partial = false) {
+export function FindScriptRAM(ns: NS, ram: RAM, script: string, threads: number, spread = false, partial = false) {
 	const threadRAM = script === "hack.js" ? HACK_RAM : WEAKEN_GROW_RAM;
 	const homeBonus = 1 + ((ns.getServer("home").cpuCores - 1) / 16);
 
@@ -10,7 +10,7 @@ export function FindScriptRAM(ns, ram, script, threads, spread = false, partial 
 		spread = false;
 
 	if(homeBonus !== 1 && script === "grow.js") {
-		const {free, reserved} = ram.GetServer("home");
+		const {free, reserved} = ram.GetServer("home") ?? {free: 0, reserved: 0};
 		const spawn = Math.ceil(threads / homeBonus);
 
 		if(free - reserved >= threadRAM * threads) {
@@ -62,8 +62,15 @@ export function FindScriptRAM(ns, ram, script, threads, spread = false, partial 
 
 	return hosts;
 }
-/** @param {import("../").NS} ns */
-export function RunScript(ns, script, target, threads, spread = false, partial = false, ...args) {
+export function RunScript(
+	ns: NS,
+	script: string,
+	target: string,
+	threads: number,
+	spread = false,
+	partial = false,
+	...args: (string | number | boolean)[]
+) {
 	const ram = new RAM(ns);
 	const hosts = FindScriptRAM(ns, ram, script, threads, spread, partial);
 	const pids = [];

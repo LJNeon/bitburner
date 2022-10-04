@@ -1,17 +1,26 @@
-import {MIN_HOME_RAM, PERSONAL_SERVER_SHARE} from "utility/constants.js";
-import {ScanAll} from "utility/misc.js";
+import {NS} from "@ns";
+import {MIN_HOME_RAM, PERSONAL_SERVER_SHARE} from "utility/constants";
+import {ScanAll} from "utility/misc";
+
+interface Chunk {
+	hostname: string;
+	used: number;
+	free: number;
+	total: number;
+	reserved: number;
+	bought: boolean;
+}
 
 export default class RAM {
-	/** @param {import("../").NS} ns */
-	constructor(ns, simulateMax = false) {
+	chunks: Chunk[] = [];
+	used = 0;
+	free = 0;
+	reserved = 0;
+	total = 0;
+
+	constructor(ns: NS, simulateMax = false) {
 		/** @type {import("../").Server[]} */
 		const servers = ScanAll(ns).map(n => ns.getServer(n)).filter(s => s.hasAdminRights && s.maxRam > 0);
-
-		this.chunks = [];
-		this.used = 0;
-		this.free = 0;
-		this.reserved = 0;
-		this.total = 0;
 
 		for(const server of servers) {
 			if(server.hostname.startsWith("hacknet"))
@@ -56,14 +65,14 @@ export default class RAM {
 	}
 
 	get chunkList() {
-		return this.chunks;
+		return this.chunks.slice();
 	}
 
-	GetServer(hostname) {
+	GetServer(hostname: string) {
 		return this.chunks.find(c => c.hostname === hostname);
 	}
 
-	Reserve(hostname, size) {
+	Reserve(hostname: string, size: number) {
 		const match = this.GetServer(hostname);
 
 		if(match == null || match.free - match.reserved < size)

@@ -3,15 +3,16 @@
   "version": "0.1.0",
   "author": "ElJay#7711",
   "scripts": {
-    "lint": "eslint src --ext .js",
-    "push": "bitburner-sync",
-    "pull": "bitburner-sync --get",
-    "define": "curl -L -o src/index.d.ts https://raw.githubusercontent.com/danielyxie/bitburner/dev/src/ScriptEditor/NetscriptDefinitions.d.ts"
+    "lint": "eslint src",
+    "watch": "bitburner-filesync"
   },
   "dependencies": {
-    "bitburner-sync": "^1.5.3"
+    "bitburner-filesync": "^1.1.5"
   },
   "devDependencies": {
-    "eslint": "^8.22.0"
+    "@typescript-eslint/eslint-plugin": "^5.38.1",
+    "@typescript-eslint/parser": "^5.38.1",
+    "eslint": "^8.24.0",
+    "typescript": "^4.8.4"
   }
 }

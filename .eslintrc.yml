@@ -1,8 +1,15 @@
+root: true
+
 env: {
+	browser: true,
 	es2022: true
 }
 
-extends: "eslint:recommended"
+plugins: ["@typescript-eslint"]
+
+extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended"]
+
+ignorePatterns: "NetscriptDefinitions.d.ts"
 
 rules: {
 	array-bracket-spacing: "error",
@@ -47,14 +54,14 @@ rules: {
 	no-constant-condition: ["error", {checkLoops: false}],
 	no-else-return: "error",
 	no-empty: ["error", {allowEmptyCatch: true}],
-	no-extra-parens: ["error", "all", {nestedBinaryExpressions: false}],
+	"@typescript-eslint/no-extra-parens": ["error", "all", {nestedBinaryExpressions: false}],
 	no-mixed-operators: "error",
 	no-multiple-empty-lines: ["error", {max: 1}],
 	no-new-wrappers: "error",
 	no-prototype-builtins: "off",
-	no-shadow: ["error", {builtinGlobals: true}],
+	"@typescript-eslint/no-shadow": ["error", {builtinGlobals: true}],
 	no-trailing-spaces: "error",
-	no-unused-vars: ["error", {argsIgnorePattern: "^_"}],
+	"@typescript-eslint/no-unused-vars": ["error", {argsIgnorePattern: "^_"}],
 	no-var: "error",
 	object-curly-newline: ["error", {
 		ObjectExpression: {multiline: true, minProperties: 4},
@@ -106,7 +113,7 @@ rules: {
 	prefer-const: ["error", {destructuring: "all"}],
 	prefer-template: "error",
 	quotes: ["error", "double"],
-	# Dishonor! Dishonor on you, dishonor on ya cow!
+	# Dishonor! Dishonor on you, dishonor on your cow!
 	require-atomic-updates: "off",
 	semi: "error",
 	space-before-function-paren: ["error", {
@@ -118,4 +125,9 @@ rules: {
 	strict: ["error", "global"]
 }
 
-parserOptions: {sourceType: "module", ecmaVersion: 13}
+parser: "@typescript-eslint/parser"
+
+parserOptions: {
+	sourceType: "module",
+	ecmaVersion: 13
+}
