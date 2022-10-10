@@ -214,7 +214,7 @@ class Batcher {
 		this.#threads = TaskRecord(0);
 		this.#Adjust();
 		this.#lastPrint = this.#createdAt;
-		this.Print();
+		this.#Print();
 	}
 
 	static async From(ns: NS, hostname: string, debug: boolean) {
@@ -357,7 +357,7 @@ class Batcher {
 		}
 	}
 
-	Print() {
+	#Print() {
 		const rows = new Map<string, string>();
 		let color = Color.Warn;
 
@@ -424,7 +424,7 @@ class Batcher {
 			this.#Process(now);
 
 			if(now - this.#lastPrint >= 500)
-				this.Print();
+				this.#Print();
 		}
 	}
 

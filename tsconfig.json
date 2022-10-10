@@ -9,7 +9,6 @@
     "outDir": "dist/",
     "allowJs": true,
     "strict": true,
-    "inlineSourceMap": true,
     "noImplicitThis": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {

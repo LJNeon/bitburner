@@ -16,7 +16,7 @@ export async function main(ns: NS) {
 
 	for(let i = 0; i < targets.length; i++) {
 		message += `\n${Color.Info}${i + 1}. ${Color.Default}${targets[i].hostname}`;
-		message += ` (${nFormat(targets[i].percent * 100, "l")}%) for $${nFormat(targets[i].profit)}/sec`;
+		message += ` (${nFormat(targets[i].percent * 100, "l", 2)}%) for $${nFormat(targets[i].profit)}/sec`;
 	}
 
 	ns.tprint(message);
