@@ -24,7 +24,7 @@ function PrintPreparations(ns: NS, server: Server) {
 	ClearLastLogs(ns, 1, Color.Warn);
 	rows.set("Security", `${nFormat(server.hackDifficulty, "l", 2)}/${nFormat(server.minDifficulty, "l", 2)}`);
 	rows.set("Cash", `$${nFormat(server.moneyAvailable)}/$${nFormat(server.moneyMax)}`);
-	ns.print(Table(`Prepar${done ? "ed" : "ing"}`, rows, Color.Warn));
+	ns.print(Table(`PREPAR${done ? "ED" : "ING"}`, rows, Color.Warn));
 }
 
 async function Prepare(ns: NS, hostname: string) {

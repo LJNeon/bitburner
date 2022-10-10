@@ -1,7 +1,7 @@
 import {NS} from "@ns";
 import {Color} from "utility/enums";
 import {GetMetrics, BestXPServer, Metrics} from "utility/metrics";
-import {ScanAll} from "utility/misc";
+import {nFormat, ScanAll} from "utility/misc";
 
 export async function main(ns: NS) {
 	ns.disableLog("ALL");
@@ -16,7 +16,7 @@ export async function main(ns: NS) {
 
 	for(let i = 0; i < targets.length; i++) {
 		message += `\n${Color.Info}${i + 1}. ${Color.Default}${targets[i].hostname}`;
-		message += ` (${targets[i].percent * 100}%) for ${ns.nFormat(targets[i].profit, "$0.00a")}/sec`;
+		message += ` (${nFormat(targets[i].percent * 100, "l")}%) for $${nFormat(targets[i].profit)}/sec`;
 	}
 
 	ns.tprint(message);
