@@ -1,0 +1,3 @@
+[submodule "true-myth"]
+	path = true-myth
+	url = git@github.com:true-myth/true-myth.git
