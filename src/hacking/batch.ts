@@ -8,7 +8,7 @@ import {
 } from "utility/enums";
 import {
 	GenID, nFormat, Table, ClearLastLogs,
-	ReadPortIDs, CheckPids
+	ReadPortIDs, CheckPids, Impossible
 } from "utility/misc";
 import {
 	GetWeakThreads, GetGrowThreads, GetThreads, GetMetrics,
@@ -19,12 +19,12 @@ import {CalcDelays} from "utility/stalefish";
 
 function PrintPreparations(ns: NS, server: Server) {
 	const done = server.hackDifficulty === server.minDifficulty && server.moneyAvailable === server.moneyMax;
+	const rows = new Map();
 
 	ClearLastLogs(ns, 1, Color.Warn);
-	ns.print(`${Color.Warn}[?] Prepar${done ? "ed" : "ing"}...${Table({
-		Security: `${nFormat(server.hackDifficulty, "l", 2)}/${nFormat(server.minDifficulty, "l", 2)}`,
-		Cash: `$${nFormat(server.moneyAvailable)}/$${nFormat(server.moneyMax)}`
-	}, Color.Warn)}`);
+	rows.set("Security", `${nFormat(server.hackDifficulty, "l", 2)}/${nFormat(server.minDifficulty, "l", 2)}`);
+	rows.set("Cash", `$${nFormat(server.moneyAvailable)}/$${nFormat(server.moneyMax)}`);
+	ns.print(Table(`Prepar${done ? "ed" : "ing"}`, rows, Color.Warn));
 }
 
 async function Prepare(ns: NS, hostname: string) {
@@ -32,7 +32,7 @@ async function Prepare(ns: NS, hostname: string) {
 	let ongoing = 0;
 
 	while(true) {
-		await ns.sleep(5);
+		await ns.asleep(5);
 
 		if(ongoing !== 0) {
 			ongoing -= ReadPortIDs(ns, BATCH_PORT).filter(i => i === id).length;
@@ -151,6 +151,9 @@ class Batch {
 	}
 
 	Killed(ns: NS) {
+		if(this.cancelled)
+			return false;
+
 		return Array.from(this.running.values())
 			.some(info => !this.finished.includes(info.type) && CheckPids(ns, info.pids));
 	}
@@ -180,10 +183,12 @@ class Batcher {
 	#scheduler = new Scheduler();
 	#batches = new Map<number, Batch>();
 	#createdAt;
+	#lastPrint;
 	/*. Metrics .*/
 	#level;
 	#maxLevel;
 	#percent;
+	#profit;
 	#period;
 	#depth;
 	#threads;
@@ -203,10 +208,13 @@ class Batcher {
 		this.#level = this.#ns.getPlayer().skills.hacking;
 		this.#maxLevel = this.#level + HACK_LEVEL_RANGE;
 		this.#percent = metrics.percent;
+		this.#profit = metrics.profit;
 		this.#period = metrics.period;
 		this.#depth = metrics.depth;
 		this.#threads = TaskRecord(0);
 		this.#Adjust();
+		this.#lastPrint = this.#createdAt;
+		this.Print();
 	}
 
 	static async From(ns: NS, hostname: string, debug: boolean) {
@@ -349,9 +357,45 @@ class Batcher {
 		}
 	}
 
+	Print() {
+		const rows = new Map<string, string>();
+		let color = Color.Warn;
+
+		if(this.#stage === Stage.Running) {
+			const info = this.#ns.getRunningScript();
+
+			if(info == null)
+				Impossible();
+
+			const infoPct = nFormat(info.onlineMoneyMade / info.onlineRunningTime / this.#profit * 100, "l", 2);
+
+			color = Color.Success;
+			ClearLastLogs(this.#ns, 1, Color.Success);
+			rows.set("Batch Duration", this.#ns.tFormat(this.#period * this.#depth));
+			rows.set("Max Depth", nFormat(this.#depth, "l"));
+			rows.set("Hack Percent", nFormat(this.#percent * 100, "l"));
+			rows.set("Profits", `$${nFormat(info.onlineMoneyMade / info.onlineRunningTime * 60)}/min (${infoPct}%)`);
+		}else{
+			color = Color.Fail;
+			ClearLastLogs(this.#ns, 1);
+
+			if(this.#batches.size !== 0)
+				rows.set("Remaining Batches", String(this.#batches.size));
+		}
+
+		let total = this.#finished + this.#killed + this.#late;
+
+		total = total === 0 ? 1 : total;
+		rows.set("Finished Batches", `${nFormat(this.#finished, "l")} (${nFormat(this.#finished / total * 100, "l", 2)}%)`);
+		rows.set("Late Batches", `${nFormat(this.#late, "l")} (${nFormat(this.#late / total * 100, "l", 2)}%)`);
+		rows.set("Killed Batches", `${nFormat(this.#killed, "l")} (${nFormat(this.#killed / total * 100, "l", 2)}%)`);
+		rows.set("Desynced Batches", `${nFormat(this.#desynced, "l")} (${nFormat(this.#desynced / total * 100, "l", 2)}%)`);
+		this.#ns.print(Table(this.#stage.toUpperCase(), rows, color));
+	}
+
 	async Run() {
 		while(true) {
-			await this.#ns.sleep(5);
+			await this.#ns.asleep(5);
 
 			const now = performance.now();
 
@@ -378,6 +422,9 @@ class Batcher {
 				this.#Start(nextAt);
 
 			this.#Process(now);
+
+			if(now - this.#lastPrint >= 500)
+				this.Print();
 		}
 	}
 
@@ -385,13 +432,17 @@ class Batcher {
 		if(this.#stage === Stage.Preparing)
 			return;
 
-		//
+		for(const batch of this.#batches.values())
+			batch.Cancel(this.#ns, this.#scheduler);
 	}
 }
 
 export async function main(ns: NS) {
 	ns.disableLog("ALL");
 	ns.tail();
+
+	if(ns.args.length === 0)
+		return ns.tprint(`${Color.Fail}[!] Server must be specified.`);
 
 	const hostname = String(ns.args[0]);
 	const debug = Boolean(ns.args[1]);

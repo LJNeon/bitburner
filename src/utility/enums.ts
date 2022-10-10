@@ -1,7 +1,8 @@
 export enum Stage {
-	Preparing,
-	Running,
-	Stopping
+	Preparing = "Preparing",
+	Running = "Running",
+	Stopping = "Stopping",
+	Stopped = "Stopped"
 }
 export enum Task {
 	Weak1 = "Weak1",

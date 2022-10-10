@@ -61,6 +61,7 @@ rules: {
 	no-prototype-builtins: "off",
 	"@typescript-eslint/no-shadow": ["error", {builtinGlobals: true}],
 	no-trailing-spaces: "error",
+	"@typescript-eslint/no-unnecessary-condition": ["error", {allowConstantLoopConditions: true}],
 	"@typescript-eslint/no-unused-vars": ["error", {argsIgnorePattern: "^_"}],
 	no-var: "error",
 	object-curly-newline: ["error", {
@@ -122,12 +123,10 @@ rules: {
 		asyncArrow: "always"
 	}],
 	space-in-parens: "error",
-	strict: ["error", "global"]
+	"@typescript-eslint/strict-boolean-expressions": ["error", {allowString: false, allowNumber: false, allowNullableObject: false}]
+
 }
 
 parser: "@typescript-eslint/parser"
 
-parserOptions: {
-	sourceType: "module",
-	ecmaVersion: 13
-}
+parserOptions: {project: "tsconfig.json"}

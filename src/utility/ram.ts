@@ -19,7 +19,6 @@ export default class RAM {
 	total = 0;
 
 	constructor(ns: NS, simulateMax = false) {
-		/** @type {import("../").Server[]} */
 		const servers = ScanAll(ns).map(n => ns.getServer(n)).filter(s => s.hasAdminRights && s.maxRam > 0);
 
 		for(const server of servers) {

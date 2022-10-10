@@ -7,7 +7,7 @@ export async function main(ns: NS) {
 	const shareRam = ns.getScriptRam(script);
 
 	for(const server of ns.getPurchasedServers()) {
-		if(ns.scriptRunning(script, server) != null)
+		if(ns.scriptRunning(script, server))
 			ns.scriptKill(script, server);
 
 		ns.exec(script, server, Math.floor(ns.getServerMaxRam(server) / shareRam * ratio));

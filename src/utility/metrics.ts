@@ -87,7 +87,7 @@ function GetDepthLimit(ns: NS, target: string, pct: number) {
 	const batchRam = ((threads[Task.Weak1] + threads[Task.Weak2] + threads[Task.Grow]) * WEAKEN_GROW_RAM)
 		+ (threads[Task.Hack] * HACK_RAM);
 
-	return Math.min(Math.floor(batchRam / (ram.free - ram.reserved)), limit);
+	return Math.min(Math.floor((ram.free - ram.reserved) / batchRam), limit);
 }
 
 export interface Metrics {

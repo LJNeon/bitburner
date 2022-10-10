@@ -7,6 +7,9 @@ let lastID = 0;
 export function GenID() {
 	return lastID = (lastID + 1) % Number.MAX_SAFE_INTEGER;
 }
+export function Impossible(): never {
+	throw Error("TS caught something?!?!");
+}
 export function ScanAll(ns: NS, root = "home", found = new Set<string>()) {
 	found.add(root);
 
@@ -23,14 +26,6 @@ export function CheckPids(ns: NS, pids: number[]) {
 export async function SleepPids(ns: NS, pids: number[]) {
 	while(!CheckPids(ns, pids))
 		await ns.asleep(5);
-}
-export function LongFormat(num: number) {
-	let result = String(Math.floor(num));
-
-	for(let i = result.length - 3; i > 0; i -= 3)
-		result = `${result.slice(0, i)},${result.slice(i)}`;
-
-	return result;
 }
 
 function Floor(num: number) {
@@ -71,18 +66,22 @@ export function nFormat(num: number, format = "n", dec = 0) {
 
 	return `${Floor(num / Math.pow(10, (which * 3) - places)) / Math.pow(10, places)}${abbrs[which]}`;
 }
-export function Table(rows: {[name: string]: string}, color: Color) {
-	const longestKey = Object.keys(rows).map(k => k.length).sort((a, b) => b - a)[0];
-	const longestValue = Object.values(rows).map(v => v.length).sort((a, b) => b - a)[0];
-	const separator = `${color}|${Color.Default}`;
-	let result = "";
+export function Table(title: string, rows: Map<string, string>, color: Color) {
+	const keySize = Array.from(rows.keys()).map(k => k.length).sort((a, b) => b - a)[0];
+	const valueSize = Array.from(rows.values()).map(v => v.length).sort((a, b) => b - a)[0];
+	const width = keySize + valueSize + 5;
+	const padding = (width - title.length) / 2;
+	const left = Math.floor(padding);
+	const right = Math.ceil(padding);
+	const c = color;
+	const r = Color.Default;
+	let result =  `${c}┌${"─".repeat(width)}┐\n|${" ".repeat(left)}${r}${title}${c}${" ".repeat(right)}|`;
 
-	for(const row in rows) {
-		const key = row.length < longestKey ? row.padEnd(longestKey) : row;
-		const value = rows[row].length < longestValue ? rows[row].padEnd(longestValue) : rows[row];
-
-		result += `\n ${separator} ${key} ${separator} ${value} ${separator}`;
-	}
+	result += `\n├${"─".repeat(keySize + 2)}┬${"─".repeat(valueSize + 2)}┤\n`;
+	result += Array.from(rows.entries())
+		.map(([k, v]) => `| ${r}${k.padEnd(keySize, " ")}${c} | ${r}${v.padEnd(valueSize, " ")}${c} |`)
+		.join("\n");
+	result += `└${"─".repeat(keySize + 2)}┴${"─".repeat(valueSize + 2)}┘`;
 
 	return result;
 }

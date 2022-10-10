@@ -4,7 +4,7 @@
   "author": "ElJay#7711",
   "scripts": {
     "lint": "eslint src",
-    "watch": "bitburner-filesync"
+    "watch": "tsc -w && bitburner-filesync"
   },
   "dependencies": {
     "bitburner-filesync": "^1.1.5"

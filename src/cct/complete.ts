@@ -8,7 +8,7 @@ import {
 	MergeIntervals, ColoringOfGraph, SpiralMatrix, SubarrayMaxSum
 } from "cct/solvers";
 import {Color} from "utility/enums";
-import {ScanAll, nFormat} from "utility/misc";
+import {ScanAll, nFormat, Impossible} from "utility/misc";
 
 function FindContracts(ns: NS) {
 	return ScanAll(ns)
@@ -149,7 +149,11 @@ export async function main(ns: NS) {
 				ns.tprint(`${Color.Fail}FAILED CONTRACT! Type: ${type} Data: ${JSON.stringify(data)}`);
 			}else{
 				++success;
-				rewards.add(ns, String(reward));
+
+				if(typeof reward !== "string")
+					Impossible();
+
+				rewards.add(ns, reward);
 			}
 
 			++total;

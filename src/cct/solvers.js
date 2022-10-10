@@ -214,7 +214,7 @@ export function JumpingGameI(data) {
 	const jumps = [1];
 
 	for(let n = 0; n < data.length; n++) {
-		if(jumps[n]) {
+		if(jumps.length > n) {
 			for(let p = n; p <= Math.min(n + data[n], data.length - 1); p++)
 				jumps[p] = 1;
 		}
@@ -559,19 +559,19 @@ export function HammingCount(arr, val) {
 export function HammingEncode(data) {
 	const dataBits = data.toString(2);
 	const bits = dataBits.split("");
-	const build = [];
+	const build = ["x", "x"];
 
-	build.push("x", "x", ...bits.splice(0, 1));
+	build.push(...bits.splice(0, 1));
 
 	for(let i = 2; i < HammingSumOfParity(dataBits.length); i++)
 		build.push("x", ...bits.splice(0, Math.pow(2, i) - 1));
 
-	for(const index of build.reduce((a, e, i) => (e === "x" ? a.push(i) : i) && a, [])) {
+	for(const index of build.reduce((a, e, i) => (e === "x" ? a.push(i) : 0, a), [])) {
 		const tempCount = index + 1;
 		const tempArray = [];
 		const tempData = [...build];
 
-		while(tempData[index] !== undefined) {
+		while(tempData.length > index) {
 			const _temp = tempData.splice(index, tempCount * 2);
 
 			tempArray.push(..._temp.splice(0, tempCount));
@@ -739,7 +739,7 @@ export function ColoringOfGraph(data) {
 		const frontier = [initialVertex];
 
 		while(frontier.length > 0) {
-			const v = frontier.pop() || 0;
+			const v = frontier.pop() ?? 0;
 			const neighbors = Neighborhood(data, v);
 
 			for(const id in neighbors) {

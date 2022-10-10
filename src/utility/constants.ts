@@ -38,9 +38,9 @@ export const MIN_HOME_RAM = 32;
 // Percentage of RAM to share with current faction on personal servers.
 export const PERSONAL_SERVER_SHARE = 0.25;
 // Time in milliseconds to wait between batcher tasks.
-export const JOB_SPACER = 75;
+export const JOB_SPACER = 30;
 // Time in milliseconds where a task is "too late", causing the batch to be cancelled.
-export const SAFE_THRESHOLD = 50;
+export const SAFE_THRESHOLD = 20;
 // Range in hacking skill levels that should be handled before the batcher needs to restart.
 export const HACK_LEVEL_RANGE = 15;
 // GBs of total RAM across all accessible servers where spreading threads should be disabled.
