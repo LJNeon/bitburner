@@ -1,117 +1,122 @@
 import {NS} from "@ns";
-import {MIN_HOME_RAM, PERSONAL_SERVER_SHARE} from "utility/constants";
-import {ScanAll} from "utility/misc";
+import Maybe, {just, nothing} from "@true-myth/maybe";
+import {
+	WEAKEN_GROW_RAM, HACK_RAM, MIN_HOME_RAM, PERSONAL_SERVER_SHARE
+} from "utility/constants";
+import {Task} from "utility/enums";
+import {Impossible, ScanAll} from "utility/misc";
 
 interface Chunk {
 	hostname: string;
-	used: number;
-	free: number;
-	total: number;
-	reserved: number;
-	bought: boolean;
+	threads: number;
 }
 
 export default class RAM {
-	chunks: Chunk[] = [];
-	used = 0;
-	free = 0;
-	reserved = 0;
-	total = 0;
+	#ns;
+	#chunks = new Map<string, number>();
+	#total = 0;
 
-	constructor(ns: NS, simulateMax = false) {
-		const servers = ScanAll(ns).map(n => ns.getServer(n)).filter(s => s.hasAdminRights && s.maxRam > 0);
+	constructor(ns: NS, simulate = false) {
+		this.#ns = ns;
+
+		const servers = ScanAll(this.#ns)
+			.map(n => this.#ns.getServer(n))
+			.filter(s => s.hasAdminRights && s.maxRam > 0 && !s.hostname.startsWith("hacknet"));
 
 		for(const server of servers) {
-			if(server.hostname.startsWith("hacknet"))
-				continue;
-
-			const used = simulateMax ? 0 : server.ramUsed;
-			const free = server.maxRam - used;
-			let reserved = 0;
+			let size = server.maxRam - (simulate ? 0 : server.ramUsed);
 
 			if(server.hostname === "home")
-				reserved += MIN_HOME_RAM;
-			else if(server.purchasedByPlayer && (simulateMax || ns.getRunningScript("share.js", server.hostname) == null))
-				reserved += server.maxRam * PERSONAL_SERVER_SHARE;
+				size -= MIN_HOME_RAM;
+			else if(server.purchasedByPlayer && (simulate || ns.getRunningScript("share.js", server.hostname) == null))
+				size -= server.maxRam * PERSONAL_SERVER_SHARE;
 
-			this.used += used;
-			this.free += free;
-			this.reserved += reserved;
-			this.total += server.maxRam;
+			if(size < HACK_RAM)
+				continue;
 
-			if(free >= 0) {
-				this.chunks.push({
-					hostname: server.hostname,
-					used,
-					free,
-					total: server.maxRam,
-					reserved,
-					bought: server.purchasedByPlayer
-				});
-			}
+			this.#total += size;
+			this.#chunks.set(server.hostname, size);
+		}
+	}
+
+	Get(hostname: string) {
+		return Maybe.of(this.#chunks.get(hostname));
+	}
+
+	Total() {
+		return this.#total;
+	}
+
+	Largest(task: Task, min = 1) {
+		const per = task === Task.Hack ? HACK_RAM : WEAKEN_GROW_RAM;
+		let info: Maybe<Chunk> = nothing();
+
+		for(const [hostname, size] of this.#chunks) {
+			const threads = Math.floor(size / per);
+
+			if(threads >= min && info.mapOr(true, i => threads > i.threads))
+				info = just({hostname, threads});
 		}
 
-		this.chunks.sort((a, b) => {
-			if(a.hostname === "home")
-				return 1;
-			else if(b.hostname === "home")
-				return -1;
-			else if(a.free !== b.free)
-				return a.free - b.free;
+		return info;
+	}
 
-			return a.bought === b.bought ? 0 : a.bought ? -1 : 1;
+	#AdjustHome(threads: number) {
+		const {cpuCores} = this.#ns.getServer("home");
+
+		if(cpuCores !== 1)
+			return threads;
+
+		return Math.ceil(threads / (1 + ((cpuCores - 1) / 16)));
+	}
+
+	Reserve(task: Task, threads: number, partial = false): Maybe<Chunk> {
+		return (partial ? this.Largest(task) : this.Largest(task, threads)).match({
+			Just: server => {
+				const per = task === Task.Hack ? HACK_RAM : WEAKEN_GROW_RAM;
+				const size = this.Get(server.hostname).unwrapOrElse(() => {throw Impossible();});
+
+				if(server.hostname === "home")
+					server.threads = this.#AdjustHome(server.threads);
+
+				this.#chunks.set(server.hostname, size - (server.threads * per));
+
+				return Maybe.of(server);
+			},
+			Nothing: () => nothing()
 		});
 	}
 
-	get chunkList() {
-		return this.chunks.slice();
-	}
+	ReserveAll(task: Task, threads: number, partial = false): Maybe<Chunk[]> {
+		const servers: Chunk[] = [];
+		let spawned = 0;
+		let chunk: Chunk | false;
 
-	GetServer(hostname: string) {
-		return this.chunks.find(c => c.hostname === hostname);
-	}
+		while((chunk = this.Largest(task).unwrapOr(false)) !== false) {
+			let total = threads - spawned < chunk.threads ? threads - spawned : chunk.threads;
 
-	Reserve(hostname: string, size: number) {
-		const match = this.GetServer(hostname);
+			spawned += total;
 
-		if(match == null || match.free - match.reserved < size)
-			return false;
+			if(chunk.hostname === "home")
+				total = this.#AdjustHome(total);
 
-		match.reserved += size;
-		this.reserved += size;
+			servers.push({hostname: chunk.hostname, threads: total});
 
-		return true;
-	}
-
-	Smallest(min = 0) {
-		let hostname;
-		let size = 0;
-
-		for(const chunk of this.chunks) {
-			const free = chunk.free - chunk.reserved;
-
-			if((hostname == null || free < size) && free >= min) {
-				hostname = chunk.hostname;
-				size = free;
-			}
+			if(spawned >= threads)
+				break;
 		}
 
-		return hostname == null ? null : {hostname, size};
-	}
+		if(!partial && spawned < threads)
+			return nothing();
 
-	Largest() {
-		let hostname;
-		let size = 0;
+		const per = task === Task.Hack ? HACK_RAM : WEAKEN_GROW_RAM;
 
-		for(const chunk of this.chunks) {
-			const free = chunk.free - chunk.reserved;
+		for(const server of servers) {
+			const size = this.Get(server.hostname).unwrapOrElse(() => {throw Impossible();});
 
-			if(hostname == null || free > size) {
-				hostname = chunk.hostname;
-				size = free;
-			}
+			this.#chunks.set(server.hostname, size - (server.threads * per));
 		}
 
-		return hostname == null ? null : {hostname, size};
+		return Maybe.of(servers);
 	}
 }

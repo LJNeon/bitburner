@@ -1,6 +1,12 @@
 import {NS} from "@ns";
+import Maybe, {just, nothing} from "@true-myth/maybe";
 import {JOB_SPACER, HACK_LEVEL_RANGE} from "utility/constants";
 import {Task} from "utility/enums";
+
+interface Stalefish {
+	period: number;
+	depth: number;
+}
 
 /**
  * Calculates the period and depth for a range of hacking levels.
@@ -8,7 +14,7 @@ import {Task} from "utility/enums";
  * @param target The target server to calculate for.
  * @param limit The maximum depth allowed by safety and available RAM.
  */
-export function CalcPeriodDepth(ns: NS, target: string, limit: number) {
+export function CalcStalefish(ns: NS, target: string, limit: number) {
 	const server = ns.getServer(target);
 	const player = ns.getPlayer();
 
@@ -18,13 +24,12 @@ export function CalcPeriodDepth(ns: NS, target: string, limit: number) {
 	const maxGrowT = ns.formulas.hacking.growTime(server, player);
 	const maxHackT = ns.formulas.hacking.hackTime(server, player);
 
-	player.skills.hacking += HACK_LEVEL_RANGE;
+	player.skills.hacking += HACK_LEVEL_RANGE - 1;
 
 	const minWeakT = ns.formulas.hacking.weakenTime(server, player);
 	const minGrowT = ns.formulas.hacking.growTime(server, player);
 	const minHackT = ns.formulas.hacking.hackTime(server, player);
-	let period;
-	let depth;
+	let result: Maybe<Stalefish> = nothing();
 	// Let the witchcraft begin!
 	const kW_max = Math.min(Math.floor(1 + ((minWeakT - (4 * JOB_SPACER)) / (8 * JOB_SPACER))), limit);
 
@@ -47,8 +52,7 @@ export function CalcPeriodDepth(ns: NS, target: string, limit: number) {
 				const t_max = Math.min(t_max_H, t_max_G, t_max_W);
 
 				if(t_min <= t_max) {
-					period = Math.round(t_min);
-					depth = Math.floor(kW);
+					result = just({period: Math.round(t_min), depth: Math.floor(kW)});
 
 					break schedule;
 				}
@@ -56,10 +60,7 @@ export function CalcPeriodDepth(ns: NS, target: string, limit: number) {
 		}
 	}
 
-	if(period == null || depth == null)
-		return null;
-
-	return {period, depth};
+	return result;
 }
 /**
  * Calculates the four HWGW delays for the current hacking level.

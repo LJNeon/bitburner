@@ -14,14 +14,18 @@ export const IDS = {
 // Scripts to copy to every server.
 export const TASK_SCRIPTS = ["weaken.js", "grow.js", "hack.js"];
 // Scripts to run by task ID.
-export const SCRIPTS_BY_TYPE = {
+export const SCRIPTS_BY_TASK = {
 	[Task.Weak1]: "weaken.js",
 	[Task.Weak2]: "weaken.js",
 	[Task.Grow]: "grow.js",
 	[Task.Hack]: "hack.js"
 };
 // The order tasks are expected to finish in.
-export const TYPE_ORDER = [Task.Hack, Task.Weak1, Task.Grow, Task.Weak2];
+export const TYPE_ORDER = [
+	[Task.Hack, Task.Weak1, Task.Grow, Task.Weak2],
+	[Task.Weak1, Task.Grow, Task.Weak2],
+	[Task.Weak1, Task.Weak2]
+];
 // Programs that can open a port.
 export const PORT_PROGRAMS = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"];
 // Security cost/gain for one thread based on task.

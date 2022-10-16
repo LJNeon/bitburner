@@ -12,13 +12,13 @@ function GetTotalRam(ns: NS) {
 	return ScanAll(ns).reduce((a, b) => a + ns.getServerMaxRam(b), 0);
 }
 
-async function BuyServer(ns: NS, id: number, ram: number, upgraded = false) {
+function BuyServer(ns: NS, id: number, ram: number, upgraded = false) {
 	const displayRam = ns.nFormat(ram * 1e9, "0.00b");
 	const server = `server-${displayRam}-${id}`;
 	const shareRam = ns.getScriptRam("share.js");
 
 	ns.purchaseServer(server, ram);
-	await ns.scp(["share.js", ...TASK_SCRIPTS], server);
+	ns.scp(["share.js", ...TASK_SCRIPTS], server);
 	ns.exec("share.js", server, Math.floor(ram / shareRam * PERSONAL_SERVER_SHARE));
 	ns.print(`${upgraded ? "Upgraded" : "Purchased"} server ${id} with ${displayRam} RAM.`);
 }
@@ -37,7 +37,7 @@ export async function main(ns: NS) {
 				const cost = ns.getPurchasedServerCost(ram);
 
 				if(cost <= money && (ram / GetTotalRam(ns) >= 0.24 || i === maxSize)) {
-					await BuyServer(ns, GenID(), ram);
+					BuyServer(ns, GenID(), ram);
 
 					break;
 				}
@@ -57,7 +57,7 @@ export async function main(ns: NS) {
 				if(cost <= money && (ram / GetTotalRam(ns) >= 0.24 || i === maxSize) && ram > ns.getServerMaxRam(smallest)) {
 					ns.killall(smallest);
 					ns.deleteServer(smallest);
-					await BuyServer(ns, GrabID(smallest), ram, true);
+					BuyServer(ns, GrabID(smallest), ram, true);
 
 					break;
 				}

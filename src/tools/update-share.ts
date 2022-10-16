@@ -1,7 +1,7 @@
 import {NS} from "@ns";
 import {PERSONAL_SERVER_SHARE} from "utility/constants.js";
 
-export async function main(ns: NS) {
+export function main(ns: NS) {
 	const script = "share.js";
 	const ratio = Number(ns.args[0] ?? PERSONAL_SERVER_SHARE);
 	const shareRam = ns.getScriptRam(script);

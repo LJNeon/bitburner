@@ -7,8 +7,8 @@ let lastID = 0;
 export function GenID() {
 	return lastID = (lastID + 1) % Number.MAX_SAFE_INTEGER;
 }
-export function Impossible(): never {
-	throw Error("TS caught something?!?!");
+export function Impossible() {
+	return Error("TS caught something?!?!");
 }
 export function ScanAll(ns: NS, root = "home", found = new Set<string>()) {
 	found.add(root);

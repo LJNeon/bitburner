@@ -4,9 +4,10 @@
   "author": "ElJay#7711",
   "scripts": {
     "lint": "eslint src",
+    "true-myth": "git submodule update --init --remote --merge && cp -a true-myth/src/. src/true-myth/",
     "watch:transpile": "tsc -w --preserveWatchOutput",
     "watch:remote": "bitburner-filesync",
-    "watch": "concurrently -k -n \u200b pnpm:watch:*"
+    "watch": "concurrently -k -n ​ pnpm:watch:*"
   },
   "dependencies": {
     "bitburner-filesync": "^1.1.5",
@@ -14,8 +15,8 @@
     "typescript": "^4.8.4"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.38.1",
-    "@typescript-eslint/parser": "^5.38.1",
-    "eslint": "^8.24.0"
+    "@typescript-eslint/eslint-plugin": "^5.40.0",
+    "@typescript-eslint/parser": "^5.40.0",
+    "eslint": "^8.25.0"
   }
 }

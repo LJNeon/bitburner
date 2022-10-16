@@ -9,5 +9,5 @@ export async function main(ns: NS) {
 	await ns.grow(target);
 
 	if(typeof id !== "boolean" && typeof port === "number")
-		ns.writePort(port, id);
+		await ns.writePort(port, id);
 }

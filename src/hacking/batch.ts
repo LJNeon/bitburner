@@ -1,7 +1,6 @@
 import {NS, Server} from "@ns";
 import {
-	HACK_LEVEL_RANGE, BATCH_PORT, SAFE_THRESHOLD, SCRIPTS_BY_TYPE,
-	TYPE_ORDER
+	HACK_LEVEL_RANGE, BATCH_PORT, SAFE_THRESHOLD, TYPE_ORDER
 } from "utility/constants";
 import {
 	Task, TaskRecord, Stage, Color
@@ -11,15 +10,14 @@ import {
 	ReadPortIDs, CheckPids, Impossible
 } from "utility/misc";
 import {
-	GetWeakThreads, GetGrowThreads, GetThreads, GetMetrics,
-	Metrics
+	GetWeakThreads, GetGrowThreads, GetThreads, GetMetrics
 } from "utility/metrics";
 import {RunScript} from "utility/run-script";
 import {CalcDelays} from "utility/stalefish";
 
 function PrintPreparations(ns: NS, server: Server) {
 	const done = server.hackDifficulty === server.minDifficulty && server.moneyAvailable === server.moneyMax;
-	const rows = new Map();
+	const rows = new Map<string, string>();
 
 	ClearLastLogs(ns, 1, Color.Warn);
 	rows.set("Security", `${nFormat(server.hackDifficulty, "l", 2)}/${nFormat(server.minDifficulty, "l", 2)}`);
@@ -47,11 +45,11 @@ async function Prepare(ns: NS, hostname: string) {
 			id = GenID();
 			ongoing = RunScript(
 				ns,
-				"weaken.js",
-				hostname,
+				Task.Weak1,
 				GetWeakThreads(server.hackDifficulty - server.minDifficulty),
 				true,
 				true,
+				hostname,
 				id,
 				BATCH_PORT
 			).length;
@@ -60,11 +58,11 @@ async function Prepare(ns: NS, hostname: string) {
 			id = GenID();
 			ongoing = RunScript(
 				ns,
-				"grow.js",
-				hostname,
+				Task.Grow,
 				GetGrowThreads(ns, server, ns.getPlayer()),
 				true,
 				true,
+				hostname,
 				id,
 				BATCH_PORT
 			).length;
@@ -84,7 +82,7 @@ interface ScheduleInfo {
 }
 
 class Scheduler {
-	#delays = Object.values(Task).reduce((map, value) => map.set(value, 0), new Map<Task, number>());
+	#delays = TaskRecord(0);
 	#tasks = new Map<number, ScheduleInfo>();
 
 	Add(type: Task, createdAt: number, run: (lateBy: number) => void) {
@@ -104,13 +102,13 @@ class Scheduler {
 	}
 
 	Adjust(delays: Record<Task, number>) {
-		for(const type of Object.values(Task))
-			this.#delays.set(type, delays[type]);
+		for(const type of Object.keys(this.#delays) as Task[])
+			this.#delays[type] = delays[type];
 	}
 
 	Run(now: number) {
 		for(const [id, task] of this.#tasks) {
-			const delay = this.#delays.get(task.type) ?? 0;
+			const delay = this.#delays[task.type];
 
 			if(task.createdAt + delay <= now) {
 				this.#tasks.delete(id);
@@ -169,7 +167,7 @@ class Batch {
 	}
 
 	Desynced() {
-		return this.partial === 0 && TYPE_ORDER.some((type, i) => this.finished[i] !== type);
+		return TYPE_ORDER[this.partial].some((type, i) => this.finished[i] !== type);
 	}
 }
 
@@ -187,7 +185,7 @@ class Batcher {
 	/*. Metrics .*/
 	#level;
 	#maxLevel;
-	#percent;
+	#leech;
 	#profit;
 	#period;
 	#depth;
@@ -199,15 +197,18 @@ class Batcher {
 	#late = 0;
 	#desynced = 0;
 
-	private constructor(ns: NS, hostname: string, metrics: Metrics, debug: boolean) {
+	constructor(ns: NS, hostname: string, debug: boolean) {
 		this.#ns = ns;
 		this.#hostname = hostname;
 		this.#debug = debug;
 		this.#createdAt = performance.now();
 		this.#stage = Stage.Running;
 		this.#level = this.#ns.getPlayer().skills.hacking;
-		this.#maxLevel = this.#level + HACK_LEVEL_RANGE;
-		this.#percent = metrics.percent;
+		this.#maxLevel = this.#level + HACK_LEVEL_RANGE - 1;
+
+		const metrics = GetMetrics(this.#ns, this.#hostname).unwrapOrElse(() => {throw Error();});
+
+		this.#leech = metrics.leech;
 		this.#profit = metrics.profit;
 		this.#period = metrics.period;
 		this.#depth = metrics.depth;
@@ -215,15 +216,6 @@ class Batcher {
 		this.#Adjust();
 		this.#lastPrint = this.#createdAt;
 		this.#Print();
-	}
-
-	static async From(ns: NS, hostname: string, debug: boolean) {
-		const metrics = await GetMetrics(ns, hostname);
-
-		if(metrics == null)
-			return null;
-
-		return new Batcher(ns, hostname, metrics, debug);
 	}
 
 	#Debug(info: unknown) {
@@ -234,7 +226,7 @@ class Batcher {
 	}
 
 	#Adjust() {
-		this.#threads = GetThreads(this.#ns, this.#ns.getServer(this.#hostname), this.#ns.getPlayer(), this.#percent);
+		this.#threads = GetThreads(this.#ns, this.#ns.getServer(this.#hostname), this.#ns.getPlayer(), this.#leech);
 		this.#scheduler.Adjust(CalcDelays(this.#ns, this.#hostname, this.#period, this.#depth));
 		this.#Debug({event: "adjusted", level: this.#level, threads: this.#threads});
 	}
@@ -281,11 +273,11 @@ class Batcher {
 		const id = GenID();
 		const pids = RunScript(
 			this.#ns,
-			SCRIPTS_BY_TYPE[type],
-			this.#hostname,
+			type,
 			this.#threads[type],
 			type === Task.Weak1 || type === Task.Weak2,
 			false,
+			this.#hostname,
 			id,
 			BATCH_PORT
 		);
@@ -298,7 +290,7 @@ class Batcher {
 		const batchID = GenID();
 		const batch = new Batch();
 
-		for(const type of Object.values(Task)) {
+		for(const type of Object.keys(this.#threads) as Task[]) {
 			batch.scheduled.set(type, this.#scheduler.Add(type, at, lateBy => this.#Execute(batchID, batch, type, lateBy)));
 			this.#Debug({event: "scheduled", batchID, type});
 		}
@@ -365,7 +357,7 @@ class Batcher {
 			const info = this.#ns.getRunningScript();
 
 			if(info == null)
-				Impossible();
+				throw Impossible();
 
 			const infoPct = nFormat(info.onlineMoneyMade / info.onlineRunningTime / this.#profit * 100, "l", 2);
 
@@ -373,7 +365,7 @@ class Batcher {
 			ClearLastLogs(this.#ns, 1, Color.Success);
 			rows.set("Batch Duration", this.#ns.tFormat(this.#period * this.#depth));
 			rows.set("Max Depth", nFormat(this.#depth, "l"));
-			rows.set("Hack Percent", nFormat(this.#percent * 100, "l"));
+			rows.set("Leech Percent", nFormat(this.#leech * 100, "l"));
 			rows.set("Profits", `$${nFormat(info.onlineMoneyMade / info.onlineRunningTime * 60)}/min (${infoPct}%)`);
 		}else{
 			color = Color.Fail;
@@ -462,10 +454,12 @@ export async function main(ns: NS) {
 
 	while(true) {
 		await Prepare(ns, hostname);
-		batcher = await Batcher.From(ns, hostname, debug);
 
-		if(batcher == null)
+		try {
+			batcher = new Batcher(ns, hostname, debug);
+		}catch{
 			return ns.print(`${Color.Fail}Failed to calculate metrics, exiting...`);
+		}
 
 		await batcher.Run();
 	}

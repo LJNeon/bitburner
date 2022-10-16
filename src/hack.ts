@@ -9,5 +9,5 @@ export async function main(ns: NS) {
 	await ns.hack(target);
 
 	if(typeof id !== "boolean" && typeof port === "number")
-		ns.writePort(port, id);
+		await ns.writePort(port, id);
 }

@@ -3,7 +3,7 @@ import {TASK_SCRIPTS, PORT_PROGRAMS} from "utility/constants";
 import {Color} from "utility/enums";
 import {ScanAll} from "utility/misc";
 
-export async function main(ns: NS) {
+export function main(ns: NS) {
 	const programs = PORT_PROGRAMS.map(file => ns.fileExists(file));
 	const openable = programs.filter(p => p).length;
 	const targets = ScanAll(ns).filter(s => !ns.hasRootAccess(s) && ns.getServerNumPortsRequired(s) <= openable);
@@ -27,7 +27,7 @@ export async function main(ns: NS) {
 		ns.nuke(target);
 
 		if(ns.getServerMaxRam(target) !== 0)
-			await ns.scp(TASK_SCRIPTS, target);
+			ns.scp(TASK_SCRIPTS, target);
 	}
 
 	ns.tprint(`${Color.Default}Gained root access to ${targets.length} server${targets.length === 1 ? "" : "s"}.`);

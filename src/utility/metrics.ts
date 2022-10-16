@@ -1,12 +1,12 @@
 import {NS, Server, Player} from "@ns";
+import Maybe, {just, nothing} from "@true-myth/maybe";
 import {
-	JOB_SPACER, HACK_LEVEL_RANGE, SEC_PER_THREAD, LEECH_PERCENTS,
-	HACK_RAM, WEAKEN_GROW_RAM
+	JOB_SPACER, HACK_LEVEL_RANGE, SEC_PER_THREAD, LEECH_PERCENTS
 } from "utility/constants";
 import {Task} from "utility/enums";
 import {ScanAll} from "utility/misc";
 import RAM from "utility/ram";
-import {CalcPeriodDepth} from "utility/stalefish";
+import {CalcStalefish} from "utility/stalefish";
 
 export function GetWeakThreads(security: number) {
 	return Math.ceil(security / SEC_PER_THREAD.WEAKEN);
@@ -84,27 +84,34 @@ function GetDepthLimit(ns: NS, target: string, pct: number) {
 	const limit = Math.floor(weakT / (JOB_SPACER * 8));
 	const ram = new RAM(ns, true);
 	const threads = GetThreads(ns, server, player, pct);
-	const batchRam = ((threads[Task.Weak1] + threads[Task.Weak2] + threads[Task.Grow]) * WEAKEN_GROW_RAM)
-		+ (threads[Task.Hack] * HACK_RAM);
+	let depth = 0;
 
-	return Math.min(Math.floor((ram.free - ram.reserved) / batchRam), limit);
+	for(; depth < limit; depth++) {
+		if(ram.Reserve(Task.Weak1, threads[Task.Weak1]).isNothing)
+			break;
+		else if(ram.Reserve(Task.Weak2, threads[Task.Weak2]).isNothing)
+			break;
+		else if(ram.Reserve(Task.Grow, threads[Task.Grow]).isNothing)
+			break;
+		else if(ram.Reserve(Task.Hack, threads[Task.Hack]).isNothing)
+			break;
+	}
+
+	return depth;
 }
 
-export interface Metrics {
-	hostname: string;
+interface Metrics {
 	profit: number;
-	percent: number;
+	leech: number;
 	period: number;
 	depth: number;
 }
-export async function GetMetrics(ns: NS, hostname: string): Promise<Metrics | null> {
-	let percent;
-	let profit;
-	let period;
-	let depth;
 
-	for(const hackPct of LEECH_PERCENTS) {
-		const limit = GetDepthLimit(ns, hostname, hackPct);
+export function GetMetrics(ns: NS, hostname: string) {
+	let metrics: Maybe<Metrics> = nothing();
+
+	for(const leech of LEECH_PERCENTS) {
+		const limit = GetDepthLimit(ns, hostname, leech);
 
 		if(limit === 0)
 			break;
@@ -114,49 +121,44 @@ export async function GetMetrics(ns: NS, hostname: string): Promise<Metrics | nu
 		server.hackDifficulty = server.minDifficulty;
 
 		const chance = ns.formulas.hacking.hackChance(server, ns.getPlayer());
-		const sf = CalcPeriodDepth(ns, hostname, limit);
+		const stalefish = CalcStalefish(ns, hostname, limit).unwrapOr(false);
 
-		if(sf == null)
+		if(stalefish === false)
 			break;
 
-		const nextProfit = server.moneyMax * chance * hackPct * sf.depth / (sf.period * sf.depth / 1e3);
+		const profit = server.moneyMax * chance * leech * stalefish.depth / (stalefish.period * stalefish.depth / 1e3);
 
-		if(profit == null || nextProfit > profit) {
-			percent = hackPct;
-			profit = nextProfit;
-			({period, depth} = sf);
+		if(metrics.mapOr(true, m => profit > m.profit)) {
+			metrics = just({
+				profit,
+				leech,
+				period: stalefish.period,
+				depth: stalefish.depth
+			});
 		}
-
-		await ns.sleep(0);
 	}
 
-	if(percent == null || profit == null || period == null || depth == null)
-		return null;
-
-	return {
-		hostname,
-		percent,
-		profit,
-		period,
-		depth
-	};
+	return metrics;
 }
-export function BestXPServer(ns: NS) {
-	const servers = ScanAll(ns).map(n => ns.getServer(n));
+
+interface Best {
+	hostname: string;
+	score: number;
+}
+
+export function GetXPServer(ns: NS) {
+	const servers = ScanAll(ns).map(hostname => ns.getServer(hostname)).filter(server => server.hasAdminRights);
 	const player = ns.getPlayer();
-	let best;
-	let score;
+	let best: Maybe<Best> = nothing();
 
 	for(const server of servers) {
 		server.hackDifficulty = server.minDifficulty;
 
-		const nextScore = ns.formulas.hacking.hackExp(server, player) / ns.formulas.hacking.growTime(server, player);
+		const score = ns.formulas.hacking.hackExp(server, player) / ns.formulas.hacking.growTime(server, player);
 
-		if(score == null || nextScore > score) {
-			best = server.hostname;
-			score = nextScore;
-		}
+		if(best.mapOr(true, b => score > b.score))
+			best = just({hostname: server.hostname, score});
 	}
 
-	return best;
+	return best.map(b => b.hostname);
 }

@@ -1,8 +1,7 @@
 import {NS} from "@ns";
-import {JOB_SPACER} from "utility/constants";
-import {Color} from "/utility/enums";
-import {GetWeakThreads, GetGrowThreads, BestXPServer} from "utility/metrics";
-import {SleepPids, nFormat} from "utility/misc";
+import {Color, Task} from "/utility/enums";
+import {GetWeakThreads, GetGrowThreads, GetXPServer} from "utility/metrics";
+import {SleepPids, nFormat, GenID} from "utility/misc";
 import {RunScript} from "utility/run-script";
 
 async function Prepare(ns: NS, hostname: string) {
@@ -21,16 +20,13 @@ async function Prepare(ns: NS, hostname: string) {
 			const threads = GetWeakThreads(hackDifficulty - minDifficulty);
 
 			ns.print(`${Color.Warn}[?] Difficulty at ${hackDifficulty.toFixed(2)}/${minDifficulty.toFixed(2)}`);
-			pids.push(...RunScript(ns, "weaken.js", hostname, threads, true, true));
+			pids.push(...RunScript(ns, Task.Weak1, threads, true, true, hostname, GenID()));
 		}else if(moneyAvailable !== moneyMax) {
 			const threads = GetGrowThreads(ns, server, ns.getPlayer());
 
 			ns.print(`${Color.Warn}[?] Cash at $${nFormat(moneyAvailable)}/$${nFormat(moneyMax)}`);
-			pids.push(...RunScript(ns, "grow.js", hostname, threads, false, true));
+			pids.push(...RunScript(ns, Task.Grow, threads, false, true, hostname, GenID()));
 		}
-
-		if(pids.length === 0)
-			throw Error("Not enough RAM to spawn a single thread!");
 
 		await SleepPids(ns, pids);
 	}
@@ -42,20 +38,15 @@ async function Prepare(ns: NS, hostname: string) {
 export async function main(ns: NS) {
 	ns.disableLog("ALL");
 
-	const target = BestXPServer(ns);
+	const target = GetXPServer(ns).unwrapOr(false);
+	let pids: number[] = [];
 
-	if(target == null)
+	if(target === false)
 		return ns.tprint(`${Color.Default}No hackable servers found.`);
 
 	while(true) {
 		await Prepare(ns, target);
-
-		const pids = RunScript(ns, "grow.js", target, Number.MAX_SAFE_INTEGER, true, true);
-
-		if(pids.length === 0)
-			return ns.print(`${Color.Default}Not enough RAM to spawn a single thread!`);
-
+		pids = RunScript(ns, Task.Grow, Number.MAX_SAFE_INTEGER, true, true, target, GenID());
 		await SleepPids(ns, pids);
-		await ns.sleep(JOB_SPACER * 2);
 	}
 }

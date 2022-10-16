@@ -1,10 +1,10 @@
-export enum Stage {
+export const enum Stage {
 	Preparing = "Preparing",
 	Running = "Running",
 	Stopping = "Stopping",
 	Stopped = "Stopped"
 }
-export enum Task {
+export const enum Task {
 	Weak1 = "Weak1",
 	Weak2 = "Weak2",
 	Grow = "Grow",
@@ -18,7 +18,7 @@ export function TaskRecord<T>(value: T): Record<Task, T> {
 		[Task.Hack]: value
 	};
 }
-export enum Color {
+export const enum Color {
 	Default = "\u001b[38;5;250m",
 	Info = "\u001b[38;5;116m",
 	Success = "\u001b[38;5;78m",

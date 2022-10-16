@@ -120,7 +120,7 @@ class Rewards {
 	}
 }
 
-export async function main(ns: NS) {
+export function main(ns: NS) {
 	ns.disableLog("ALL");
 
 	const servers = FindContracts(ns);
@@ -151,7 +151,7 @@ export async function main(ns: NS) {
 				++success;
 
 				if(typeof reward !== "string")
-					Impossible();
+					throw Impossible();
 
 				rewards.add(ns, reward);
 			}

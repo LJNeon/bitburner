@@ -1,13 +1,21 @@
 import {NS} from "@ns";
 import {Color} from "utility/enums";
-import {GetMetrics, BestXPServer, Metrics} from "utility/metrics";
+import {GetMetrics, GetXPServer} from "utility/metrics";
 import {nFormat, ScanAll} from "utility/misc";
+
+interface Metrics {
+	hostname: string;
+	profit: number;
+	leech: number;
+	period: number;
+	depth: number;
+}
 
 export async function main(ns: NS) {
 	ns.disableLog("ALL");
 
 	const targets = await FindBestServer(ns, 5);
-	let message = `\n${Color.Success}Best Server for XP: ${Color.Default}${BestXPServer(ns)}`;
+	let message = `\n${Color.Success}Best Server for XP: ${Color.Default}${GetXPServer(ns).unwrapOr("N/A")}`;
 
 	message += `\n${Color.Info}Best Servers to Hack:`;
 
@@ -16,7 +24,7 @@ export async function main(ns: NS) {
 
 	for(let i = 0; i < targets.length; i++) {
 		message += `\n${Color.Info}${i + 1}. ${Color.Default}${targets[i].hostname}`;
-		message += ` (${nFormat(targets[i].percent * 100, "l", 2)}%) for $${nFormat(targets[i].profit)}/sec`;
+		message += ` at ${nFormat(targets[i].leech * 100, "l", 2)}% for $${nFormat(targets[i].profit)}/sec`;
 	}
 
 	ns.tprint(message);
@@ -27,17 +35,17 @@ export async function FindBestServer(ns: NS, amount = 1) {
 
 		return server.hasAdminRights && server.moneyMax > 0;
 	});
-	let results: Metrics[] = [];
+	const results: Metrics[] = [];
 
 	for(const hostname of servers) {
-		const metrics = await GetMetrics(ns, hostname);
-
-		if(metrics != null)
-			results.push(metrics);
+		GetMetrics(ns, hostname).match({
+			Just: metrics => results.push({...metrics, hostname}),
+			Nothing: () => {/*. to see here .*/}
+		});
+		await ns.sleep(0);
 	}
 
 	results.sort((a, b) => b.profit - a.profit);
-	results = results.filter(s => s.percent > 0);
 
 	return results.slice(0, amount);
 }
