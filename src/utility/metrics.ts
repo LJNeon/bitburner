@@ -1,5 +1,5 @@
 import {NS, Server, Player} from "@ns";
-import Maybe, {just, nothing} from "@true-myth/maybe";
+import {Maybe, just, nothing} from "utility/true-myth";
 import {
 	JOB_SPACER, HACK_LEVEL_RANGE, SEC_PER_THREAD, LEECH_PERCENTS
 } from "utility/constants";

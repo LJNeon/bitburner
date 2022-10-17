@@ -1,5 +1,5 @@
 import {NS} from "@ns";
-import Maybe, {just, nothing} from "@true-myth/maybe";
+import {Maybe, just, nothing} from "utility/true-myth";
 import {
 	WEAKEN_GROW_RAM, HACK_RAM, MIN_HOME_RAM, PERSONAL_SERVER_SHARE
 } from "utility/constants";

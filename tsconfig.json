@@ -13,9 +13,7 @@
 		"forceConsistentCasingInFileNames": true,
 		"paths": {
 			"/*": ["*"],
-			"@ns": ["../NetscriptDefinitions.d.ts"],
-			"@true-myth": ["true-myth/public/index.ts"],
-			"@true-myth/*":	["true-myth/public/*.ts"]
+			"@ns": ["../NetscriptDefinitions.d.ts"]
 		}
 	}
 }
